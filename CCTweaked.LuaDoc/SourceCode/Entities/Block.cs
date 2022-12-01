@@ -1,4 +1,6 @@
-namespace CCTweaked.LuaDoc;
+using CCTweaked.LuaDoc.Entities;
+
+namespace CCTweaked.LuaDoc.SourceCode.Entities;
 
 public sealed class Block
 {

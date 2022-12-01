@@ -1,4 +1,4 @@
-namespace CCTweaked.LuaDoc;
+namespace CCTweaked.LuaDoc.SourceCode.Entities;
 
 public sealed class Line
 {

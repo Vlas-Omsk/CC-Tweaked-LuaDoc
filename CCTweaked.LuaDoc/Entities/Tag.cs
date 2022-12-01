@@ -1,4 +1,4 @@
-namespace CCTweaked.LuaDoc;
+namespace CCTweaked.LuaDoc.Entities;
 
 public sealed class Tag
 {

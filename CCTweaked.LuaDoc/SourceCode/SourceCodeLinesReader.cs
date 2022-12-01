@@ -1,30 +1,25 @@
-using CCTweaked.LuaDoc.Entities;
+using CCTweaked.LuaDoc.SourceCode.Entities;
 
-namespace CCTweaked.LuaDoc;
+namespace CCTweaked.LuaDoc.SourceCode;
 
-public sealed class StubBlocksReader
+public sealed class SourceCodeLinesReader
 {
-    private readonly StubBlockReader _blockReader = new StubBlockReader();
     private string _line;
 
-    public StubBlocksReader()
+    public SourceCodeLinesReader()
     {
     }
 
-    public IEnumerable<Block> ReadBlocks(string path)
+    public IEnumerable<Line[]> ReadLinesBlock(string path)
     {
         using var reader = new StreamReader(path);
         _line = reader.ReadLine();
 
         while (_line != null)
-        {
-            var block = ReadBlock(reader).ToArray();
-
-            yield return _blockReader.Read(block);
-        }
+            yield return ReadLines(reader).ToArray();
     }
 
-    private IEnumerable<Line> ReadBlock(StreamReader reader)
+    private IEnumerable<Line> ReadLines(StreamReader reader)
     {
         while (string.IsNullOrEmpty(_line))
             _line = reader.ReadLine();

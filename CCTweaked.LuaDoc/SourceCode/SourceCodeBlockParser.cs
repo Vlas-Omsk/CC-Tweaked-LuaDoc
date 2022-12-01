@@ -1,8 +1,10 @@
 using System.Text.RegularExpressions;
+using CCTweaked.LuaDoc.Entities;
+using CCTweaked.LuaDoc.SourceCode.Entities;
 
-namespace CCTweaked.LuaDoc;
+namespace CCTweaked.LuaDoc.SourceCode;
 
-public sealed class StubBlockReader
+public sealed class SourceCodeBlockParser
 {
     private Line[] _block;
     private int _index = 0;
@@ -10,16 +12,16 @@ public sealed class StubBlockReader
     private readonly Dictionary<string, List<Tag>> _tags = new Dictionary<string, List<Tag>>();
     private readonly List<string> _data = new List<string>();
 
-    public StubBlockReader()
+    public SourceCodeBlockParser()
     {
     }
 
-    public Block Read(Line[] block)
+    public Block Parse(Line[] block)
     {
         _block = block;
 
         while (_index < _block.Length)
-            ReadLine();
+            ParseLine();
 
         var blockEntity = new Block(_description, _tags.Select(x => new KeyValuePair<string, Tag[]>(x.Key, x.Value.ToArray())).ToArray(), _data.ToArray());
 
@@ -31,16 +33,16 @@ public sealed class StubBlockReader
         return blockEntity;
     }
 
-    private void ReadLine()
+    private void ParseLine()
     {
         var line = _block[_index];
 
         if (line.Type == LineType.Comment)
         {
             if (IsTagStart(line.Data))
-                ReadTag(line);
+                ParseTag(line);
             else
-                ReadDescription(line);
+                ParseDescription(line);
         }
         else
         {
@@ -49,13 +51,13 @@ public sealed class StubBlockReader
         }
     }
 
-    private void ReadTag(Line line)
+    private void ParseTag(Line line)
     {
         var match = Regex.Match(line.Data, @"@([a-zA-Z]*)(\[(.*?)\])?\s*(.*)");
 
         var tagName = match.Groups[1].Value;
         var paramsMatches = Regex.Matches(match.Groups[3].Value, @"([a-zA-Z0-9]+)(\s*=\s*(.*))?");
-        var data = match.Groups[4].Value + ReadText();
+        var data = match.Groups[4].Value + ParseText();
 
         var @params = new Dictionary<string, string>();
 
@@ -74,15 +76,15 @@ public sealed class StubBlockReader
             tags.Add(tag);
     }
 
-    private void ReadDescription(Line line)
+    private void ParseDescription(Line line)
     {
         if (_description != null)
             throw new Exception("Internal error");
 
-        _description = line.Data + ReadText();
+        _description = line.Data + ParseText();
     }
 
-    private string ReadText()
+    private string ParseText()
     {
         Line line;
         string text = string.Empty;

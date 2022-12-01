@@ -1,35 +1,36 @@
 using System.Text.RegularExpressions;
 using CCTweaked.LuaDoc.Entities;
+using CCTweaked.LuaDoc.SourceCode.Entities;
 
-namespace CCTweaked.LuaDoc;
+namespace CCTweaked.LuaDoc.SourceCode;
 
-public sealed class EntityBuilder
+public sealed class SourceCodeEntityParser
 {
-    public EntityBuilder()
+    public SourceCodeEntityParser()
     {
     }
 
-    public IEnumerable<Entity> Build(IEnumerable<Block> blocks)
+    public IEnumerable<Entity> Parse(IEnumerable<Block> blocks)
     {
         foreach (var block in blocks)
-            yield return BuildEntity(block);
+            yield return ParseEntity(block);
     }
 
-    private Entity BuildEntity(Block block)
+    private Entity ParseEntity(Block block)
     {
         if (block.Tags.Any(x => x.Key == "module"))
-            return BuildModuleEntity(block);
+            return ParseModuleEntity(block);
         else if (block.Data.Any(x => x.Contains("function")))
-            return BuildFunctionEntity(block);
+            return ParseFunctionEntity(block);
         else
-            return BuildOtherEntity(block);
+            return ParseOtherEntity(block);
     }
 
-    private Other BuildOtherEntity(Block block)
+    private Other ParseOtherEntity(Block block)
     {
         var other = new Other()
         {
-            Description = GetText(block.Description),
+            Description = NormalizeText(block.Description),
             Data = block.Data
         };
 
@@ -45,11 +46,11 @@ public sealed class EntityBuilder
         return other;
     }
 
-    private Module BuildModuleEntity(Block block)
+    private Module ParseModuleEntity(Block block)
     {
         var module = new Module()
         {
-            Description = GetText(block.Description),
+            Description = NormalizeText(block.Description),
         };
 
         var tagDictionary = new Dictionary<string, Tag[]>();
@@ -67,11 +68,11 @@ public sealed class EntityBuilder
         return module;
     }
 
-    private Function BuildFunctionEntity(Block block)
+    private Function ParseFunctionEntity(Block block)
     {
         var function = new Function()
         {
-            Description = GetText(block.Description),
+            Description = NormalizeText(block.Description),
             Name = Regex.Match(block.Data[0], @"function\s(.*?)\(").Groups[1].Value,
         };
 
@@ -79,7 +80,7 @@ public sealed class EntityBuilder
 
         for (var i = 1; i < 999; i++)
         {
-            var overload = GetOverload(block, i);
+            var overload = ParseOverload(block, i);
 
             if (overload == null)
                 break;
@@ -107,7 +108,7 @@ public sealed class EntityBuilder
         return function;
     }
 
-    private int GetTParamId(Tag tag)
+    private int ParseTParamId(Tag tag)
     {
         var first = tag.Params.FirstOrDefault();
 
@@ -117,7 +118,7 @@ public sealed class EntityBuilder
         return 1;
     }
 
-    private Overload GetOverload(Block block, int index)
+    private Overload ParseOverload(Block block, int index)
     {
         var @params = new List<Parameter>();
         var returns = new List<Return>();
@@ -128,7 +129,7 @@ public sealed class EntityBuilder
             {
                 foreach (var value in tags.Value)
                 {
-                    if (index != GetTParamId(value))
+                    if (index != ParseTParamId(value))
                         continue;
 
                     var typeEnd = TypeParser.GetTypeEnd(value.Data, 0);
@@ -154,7 +155,7 @@ public sealed class EntityBuilder
                         Name = name,
                         Type = type,
                         Optional = value.Params.Any(x => x.Key == "opt" && x.Value != "false"),
-                        Description = GetText(description)
+                        Description = NormalizeText(description)
                     });
                 }
             }
@@ -162,7 +163,7 @@ public sealed class EntityBuilder
             {
                 foreach (var value in tags.Value)
                 {
-                    if (index != GetTParamId(value))
+                    if (index != ParseTParamId(value))
                         continue;
 
                     var typeEnd = TypeParser.GetTypeEnd(value.Data, 0);
@@ -175,7 +176,7 @@ public sealed class EntityBuilder
                     returns.Add(new Return()
                     {
                         Type = type,
-                        Description = GetText(description)
+                        Description = NormalizeText(description)
                     });
                 }
             }
@@ -190,7 +191,7 @@ public sealed class EntityBuilder
                         Name = match.Groups[1].Value,
                         Type = "any",
                         Optional = false,
-                        Description = GetText(match.Groups[2].Value)
+                        Description = NormalizeText(match.Groups[2].Value)
                     });
                 }
             }
@@ -215,7 +216,7 @@ public sealed class EntityBuilder
         return type;
     }
 
-    private static string GetText(string text)
+    private static string NormalizeText(string text)
     {
         if (text == null)
             return null;

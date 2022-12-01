@@ -1,4 +1,5 @@
 using CCTweaked.LuaDoc.Entities;
+using CCTweaked.LuaDoc.SourceCode;
 
 namespace CCTweaked.LuaDoc;
 
@@ -13,8 +14,9 @@ public static class Program
 
         Directory.CreateDirectory("test");
 
-        var blocksReader = new StubBlocksReader();
-        var entityBuilder = new EntityBuilder();
+        var linesReader = new SourceCodeLinesReader();
+        var blockParser = new SourceCodeBlockParser();
+        var entityParser = new SourceCodeEntityParser();
 
         foreach (var file in files)
         {
@@ -22,12 +24,13 @@ public static class Program
 
             foreach (var path in file.Value)
             {
-                var blocks = blocksReader.ReadBlocks(path);
+                var linesBlock = linesReader.ReadLinesBlock(path);
+                var blocks = linesBlock.Select(x => blockParser.Parse(x));
 
                 if (entities == null)
-                    entities = entityBuilder.Build(blocks);
+                    entities = entityParser.Parse(blocks);
                 else
-                    entities = entities.Concat(entityBuilder.Build(blocks));
+                    entities = entities.Concat(entityParser.Parse(blocks));
             }
 
             using var entityWriter = new EntityWriter(Path.Combine("test", file.Key));

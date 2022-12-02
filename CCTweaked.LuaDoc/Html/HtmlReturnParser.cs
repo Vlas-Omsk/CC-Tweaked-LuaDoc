@@ -4,7 +4,7 @@ using HtmlAgilityPack;
 
 namespace CCTweaked.LuaDoc.Html;
 
-public sealed class HtmlReturnParser
+internal sealed class HtmlReturnParser
 {
     private readonly IEnumerator<HtmlNode> _enumerator;
 

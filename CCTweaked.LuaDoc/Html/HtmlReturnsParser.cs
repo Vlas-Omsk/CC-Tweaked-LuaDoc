@@ -3,7 +3,7 @@ using HtmlAgilityPack;
 
 namespace CCTweaked.LuaDoc.Html;
 
-public sealed class HtmlReturnsParser : HtmlListParser<Return>
+internal sealed class HtmlReturnsParser : HtmlListParser<Return>
 {
     public HtmlReturnsParser(IEnumerator<HtmlNode> enumerator) : base(enumerator)
     {

@@ -2,7 +2,7 @@ using HtmlAgilityPack;
 
 namespace CCTweaked.LuaDoc.Html;
 
-public abstract class HtmlListParser<T>
+internal abstract class HtmlListParser<T>
 {
     private readonly IEnumerator<HtmlNode> _enumerator;
 

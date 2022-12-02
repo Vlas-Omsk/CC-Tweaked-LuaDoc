@@ -3,7 +3,7 @@ using HtmlAgilityPack;
 
 namespace CCTweaked.LuaDoc.Html;
 
-public sealed class HtmlSectionsParser
+internal sealed class HtmlSectionsParser
 {
     private readonly IEnumerator<HtmlNode> _enumerator;
 
@@ -26,15 +26,15 @@ public sealed class HtmlSectionsParser
 
             if (section == "Parameters")
             {
-                yield return new HtmlSection(SectionType.Parameters, ParseParameters());
+                yield return new HtmlSection(HtmlSectionType.Parameters, ParseParameters());
             }
             else if (section == "Returns")
             {
-                yield return new HtmlSection(SectionType.Returns, ParseReturns());
+                yield return new HtmlSection(HtmlSectionType.Returns, ParseReturns());
             }
             else if (section == "See also")
             {
-                yield return new HtmlSection(SectionType.SeeCollection, ParseSee());
+                yield return new HtmlSection(HtmlSectionType.SeeCollection, ParseSee());
             }
             else if (section == "Changes" || section == "Usage" || section == "Throws")
             {

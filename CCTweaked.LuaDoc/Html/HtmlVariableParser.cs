@@ -3,7 +3,7 @@ using HtmlAgilityPack;
 
 namespace CCTweaked.LuaDoc.Html;
 
-public sealed class HtmlVariableParser
+internal sealed class HtmlVariableParser
 {
     private readonly IEnumerator<HtmlNode> _enumerator;
 

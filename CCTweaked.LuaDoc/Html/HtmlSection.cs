@@ -1,18 +1,18 @@
 namespace CCTweaked.LuaDoc.Html;
 
-public sealed class HtmlSection
+internal sealed class HtmlSection
 {
-    public HtmlSection(SectionType type, object data)
+    public HtmlSection(HtmlSectionType type, object data)
     {
         Type = type;
         Data = data;
     }
 
-    public SectionType Type { get; }
+    public HtmlSectionType Type { get; }
     public object Data { get; }
 }
 
-public enum SectionType
+internal enum HtmlSectionType
 {
     Parameters,
     Returns,

@@ -3,7 +3,7 @@ using HtmlAgilityPack;
 
 namespace CCTweaked.LuaDoc.Html;
 
-public sealed class HtmlFunctionParser
+internal sealed class HtmlFunctionParser
 {
     private readonly IEnumerator<HtmlNode> _enumerator;
 
@@ -33,7 +33,7 @@ public sealed class HtmlFunctionParser
             {
                 switch (section.Type)
                 {
-                    case SectionType.Parameters:
+                    case HtmlSectionType.Parameters:
                         {
                             var items = ((IEnumerable<Parameter>)section.Data).ToArray();
 
@@ -44,7 +44,7 @@ public sealed class HtmlFunctionParser
                                 });
                             break;
                         }
-                    case SectionType.Returns:
+                    case HtmlSectionType.Returns:
                         {
                             var items = ((IEnumerable<Return>)section.Data).ToArray();
 
@@ -55,7 +55,7 @@ public sealed class HtmlFunctionParser
                                 });
                             break;
                         }
-                    case SectionType.SeeCollection:
+                    case HtmlSectionType.SeeCollection:
                         function.See = ((IEnumerable<string>)section.Data).ToArray();
                         break;
                 }

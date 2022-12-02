@@ -48,7 +48,14 @@ public sealed class EntityWriter : IDisposable
         WriteCommentLine("@meta");
         _writer.WriteLine();
 
-        WriteModuleEntity(module, module.Name + "lib");
+        WriteDescription(module.Description);
+        WriteSeeCollection(module.See);
+
+        WriteCommentLine($"@class {module.Name}lib");
+        _writer.WriteLine($"{module.Name} = {{}}");
+        _writer.WriteLine();
+
+        WriteDefinitions(module);
     }
 
     private void WriteTypeModuleEntity(Module module)
@@ -56,18 +63,18 @@ public sealed class EntityWriter : IDisposable
         if (!module.IsType)
             throw new Exception();
 
-        WriteModuleEntity(module, module.Name);
-    }
-
-    private void WriteModuleEntity(Module module, string className)
-    {
         WriteDescription(module.Description);
         WriteSeeCollection(module.See);
 
-        WriteCommentLine($"@class {className}");
-        _writer.WriteLine($"{module.Name} = {{}}");
+        WriteCommentLine($"@class {module.Name}");
+        _writer.WriteLine($"local {module.Name} = {{}}");
         _writer.WriteLine();
 
+        WriteDefinitions(module);
+    }
+
+    private void WriteDefinitions(Module module)
+    {
         foreach (var definition in module.Definitions)
         {
             if (definition is Function function)

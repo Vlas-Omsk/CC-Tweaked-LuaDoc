@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using System.Web;
 using CCTweaked.LuaDoc.Entities;
 using HtmlAgilityPack;
 
@@ -32,13 +33,13 @@ internal sealed class HtmlParameterParser
 
         if (_enumerator.Current != null && _enumerator.Current.Name == "span" && _enumerator.Current.GetClasses().Single() == "type")
         {
-            parameter.Type = TypeUtils.NormalizeType(_enumerator.Current.InnerText);
+            parameter.Type = TypeUtils.NormalizeType(HttpUtility.HtmlDecode(_enumerator.Current.InnerText));
             _enumerator.MoveNext();
         }
 
         if (_enumerator.Current != null && _enumerator.Current.Name == "span" && _enumerator.Current.GetClasses().Single() == "default-value")
         {
-            parameter.DefaultValue = _enumerator.Current.ChildNodes[1].InnerText;
+            parameter.DefaultValue = HttpUtility.HtmlDecode(_enumerator.Current.ChildNodes[1].InnerText);
             _enumerator.MoveNext();
         }
 

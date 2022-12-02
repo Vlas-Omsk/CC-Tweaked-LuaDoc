@@ -5,6 +5,7 @@ public sealed class Function : Entity, IDefinition
     public string Name { get; set; }
     public Overload<Parameter>[] ParametersOverloads { get; set; }
     public Overload<Return>[] ReturnsOverloads { get; set; }
+    public bool IsInstance { get; set; }
 }
 
 public sealed class Overload<T>

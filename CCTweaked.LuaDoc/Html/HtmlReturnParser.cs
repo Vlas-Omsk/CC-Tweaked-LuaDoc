@@ -1,3 +1,4 @@
+using System.Web;
 using CCTweaked.LuaDoc.Entities;
 using HtmlAgilityPack;
 
@@ -25,8 +26,7 @@ public sealed class HtmlReturnParser
 
         if (_enumerator.Current != null && _enumerator.Current.Name == "span" && _enumerator.Current.GetClasses().Single() == "type")
         {
-            @return.Type = TypeUtils.NormalizeType(_enumerator.Current.InnerText);
-
+            @return.Type = TypeUtils.NormalizeType(HttpUtility.HtmlDecode(_enumerator.Current.InnerText));
             _enumerator.MoveNext();
         }
 

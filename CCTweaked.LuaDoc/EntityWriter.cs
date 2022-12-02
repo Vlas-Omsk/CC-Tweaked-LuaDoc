@@ -94,6 +94,8 @@ public sealed class EntityWriter : IDisposable
 
         if (!string.IsNullOrWhiteSpace(variable.Value))
             _writer.Write($" = {variable.Value}");
+        else
+            _writer.Write(" = {}");
 
         _writer.WriteLine();
         _writer.WriteLine();
@@ -135,16 +137,24 @@ public sealed class EntityWriter : IDisposable
         {
             var (name, type) = GetParameterPresentation(param);
 
-            WriteCommentLine($"@param {name} {type} Default: `{param.DefaultValue}`. {param.Description}");
+            WriteComment($"@param {name} {type}");
+
+            if (!string.IsNullOrWhiteSpace(param.DefaultValue))
+                _writer.Write($" Default: `{param.DefaultValue}`.");
+
+            if (!string.IsNullOrWhiteSpace(param.Description))
+                _writer.Write(" " + param.Description.ReplaceLineEndings(" "));
+
+            _writer.WriteLine();
         }
 
         if (firstOverload != null && firstOverload.Returns.Length > 0)
         {
             foreach (var @return in firstOverload.Returns)
-                WriteCommentLine($"@return {@return.Type} . {@return.Description}");
+                WriteCommentLine($"@return {(string.IsNullOrWhiteSpace(@return.Type) ? "any" : @return.Type)} . {@return.Description.ReplaceLineEndings(" ")}");
         }
 
-        _writer.Write($"function {module.Name}.{function.Name}(");
+        _writer.Write($"function {module.Name}{(function.IsInstance ? ':' : '.')}{function.Name}(");
 
         if (firstOverload != null && firstOverload.Parameters.Length > 0)
             _writer.Write(string.Join(", ", firstOverload.Parameters.Select(x => x.Name)));

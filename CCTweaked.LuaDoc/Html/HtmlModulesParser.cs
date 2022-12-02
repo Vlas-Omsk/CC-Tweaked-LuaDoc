@@ -87,7 +87,7 @@ public sealed class HtmlModulesParser
         using (var enumerator = _enumerator.Current.ChildNodes.AsEnumerable().GetEnumerator())
         {
             enumerator.MoveToNextTaggedNode();
-            module.Definitions = new HtmlDefinitionsParser(enumerator).ParseDefinitions().ToArray();
+            module.Definitions = new HtmlDefinitionsParser(enumerator).ParseDefinitions(name).ToArray();
         }
 
         return module;

@@ -1,3 +1,4 @@
+using System.Web;
 using HtmlAgilityPack;
 
 namespace CCTweaked.LuaDoc.Html;
@@ -31,28 +32,34 @@ internal sealed class HtmlDescriptionParser
                     // TODO: Generate table
                     break;
                 case "#text":
-                    textToAdd = _enumerator.Current.InnerText.Trim().ReplaceLineEndings(" ");
+                    textToAdd = _enumerator.Current.InnerText.ReplaceLineEndings(" ");
                     break;
                 case "code":
-                    textToAdd = $" `{_enumerator.Current.InnerText.Trim()}` ";
+                    textToAdd = $"`{_enumerator.Current.InnerText.Trim()}`";
                     break;
                 case "a":
-                    textToAdd = $" {_enumerator.Current.InnerText.Trim()} ";
+                    textToAdd = $"{_enumerator.Current.InnerText.Trim()}";
                     break;
                 case "span":
                     textToAdd = _enumerator.Current.InnerText.Trim();
                     break;
                 case "p":
-                case "pre":
                     using (var enumerator = _enumerator.Current.ChildNodes.AsEnumerable().GetEnumerator())
                     {
                         enumerator.MoveNext();
                         textToAdd = new HtmlDescriptionParser(enumerator).ParseDescription();
                     }
                     break;
+                case "pre":
+                    using (var enumerator = _enumerator.Current.ChildNodes.AsEnumerable().GetEnumerator())
+                    {
+                        enumerator.MoveNext();
+                        textToAdd = $"```{Environment.NewLine}{new HtmlDescriptionParser(enumerator).ParseDescription()}{Environment.NewLine}```";
+                    }
+                    break;
                 case "h2":
                 case "strong":
-                    textToAdd = $" <b>{_enumerator.Current.InnerText}</b> ";
+                    textToAdd = $"<b>{_enumerator.Current.InnerText}</b>";
                     break;
                 case "ul":
                     bool first = true;
@@ -92,7 +99,7 @@ internal sealed class HtmlDescriptionParser
 
                 prevNodeName = _enumerator.Current.Name;
 
-                text += textToAdd;
+                text += HttpUtility.HtmlDecode(textToAdd);
             }
 
             if (!_enumerator.MoveNext())

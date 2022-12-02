@@ -13,21 +13,32 @@ internal sealed class HtmlDefinitionsParser
         _enumerator = enumerator;
     }
 
-    public IEnumerable<IDefinition> ParseDefinitions()
+    public IEnumerable<IDefinition> ParseDefinitions(string moduleName)
     {
         do
         {
-            yield return ParseDefinition();
+            yield return ParseDefinition(moduleName);
         }
         while (_enumerator.MoveToNextTaggedNode());
     }
 
-    private IDefinition ParseDefinition()
+    private IDefinition ParseDefinition(string moduleName)
     {
         if (_enumerator.Current.Name != "dt")
             throw new InvalidDataException();
 
-        var definitionNameNode = _enumerator.Current.SelectNodes("*[contains(concat(' ', @class, ' '), ' definition-name ')]").First();
+        var definitionName = _enumerator.Current.SelectNodes("*[contains(concat(' ', @class, ' '), ' definition-name ')]").First().InnerText;
+
+        if (definitionName.StartsWith(moduleName + '.'))
+            definitionName = definitionName[(moduleName.Length + 1)..];
+
+        bool isInstanceFunction = false;
+
+        if (definitionName.StartsWith(moduleName + ':'))
+        {
+            definitionName = definitionName[(moduleName.Length + 1)..];
+            isInstanceFunction = true;
+        }
 
         if (!_enumerator.MoveToNextTaggedNode())
             throw new Exception();
@@ -39,7 +50,7 @@ internal sealed class HtmlDefinitionsParser
         {
             enumerator.MoveToNextTaggedNode();
 
-            var match = Regex.Match(definitionNameNode.InnerText, @"^([a-zA-Z_0-9]+)\s*=\s*(.+)");
+            var match = Regex.Match(definitionName, @"^([a-zA-Z_0-9]+)\s*=\s*(.+)");
 
             if (match.Success)
             {
@@ -47,12 +58,12 @@ internal sealed class HtmlDefinitionsParser
             }
             else
             {
-                match = Regex.Match(definitionNameNode.InnerText, @"^([a-zA-Z_0-9]+)\(");
+                match = Regex.Match(definitionName, @"^([a-zA-Z_0-9]+)\(");
 
                 if (match.Success)
-                    return new HtmlFunctionParser(enumerator).ParseFunction(match.Groups[1].Value);
+                    return new HtmlFunctionParser(enumerator).ParseFunction(match.Groups[1].Value, isInstanceFunction);
                 else
-                    return new HtmlVariableParser(enumerator).ParseVariable(definitionNameNode.InnerText, null);
+                    return new HtmlVariableParser(enumerator).ParseVariable(definitionName, null);
             }
         }
     }

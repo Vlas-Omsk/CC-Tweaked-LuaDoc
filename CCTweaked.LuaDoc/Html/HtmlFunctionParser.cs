@@ -12,11 +12,12 @@ public sealed class HtmlFunctionParser
         _enumerator = enumerator;
     }
 
-    public Function ParseFunction(string name)
+    public Function ParseFunction(string name, bool isInstanceFunction)
     {
         var function = new Function()
         {
             Name = name,
+            IsInstance = isInstanceFunction
         };
 
         if (_enumerator.Current != null)

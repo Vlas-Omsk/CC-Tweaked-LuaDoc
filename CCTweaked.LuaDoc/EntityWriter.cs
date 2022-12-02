@@ -101,31 +101,32 @@ public sealed class EntityWriter : IDisposable
         }
     }
 
+    // FIXME
     private void WriteTags(Entity entity)
     {
-        foreach (var tags in entity.Tags)
-        {
-            foreach (var tag in tags.Value)
-            {
-                var line = '@' + tags.Key;
+        // foreach (var tags in entity.Tags)
+        // {
+        //     foreach (var tag in tags.Value)
+        //     {
+        //         var line = '@' + tags.Key;
 
-                if (tag.Params.Length > 0)
-                    line += string.Join(",", tag.Params.Select(x =>
-                    {
-                        var param = x.Key;
+        //         if (tag.Params.Length > 0)
+        //             line += string.Join(",", tag.Params.Select(x =>
+        //             {
+        //                 var param = x.Key;
 
-                        if (!string.IsNullOrEmpty(x.Value))
-                            param += "=" + x.Value;
+        //                 if (!string.IsNullOrEmpty(x.Value))
+        //                     param += "=" + x.Value;
 
-                        return param;
-                    }));
+        //                 return param;
+        //             }));
 
-                if (!string.IsNullOrEmpty(tag.Data))
-                    line += " " + tag.Data;
+        //         if (!string.IsNullOrEmpty(tag.Data))
+        //             line += " " + tag.Data;
 
-                WriteCommentedLine(line);
-            }
-        }
+        //         WriteCommentedLine(line);
+        //     }
+        // }
     }
 
     private void WriteCommentedText(string text)

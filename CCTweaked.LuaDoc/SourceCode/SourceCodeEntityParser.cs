@@ -34,14 +34,15 @@ public sealed class SourceCodeEntityParser
             Data = block.Data
         };
 
-        var tagDictionary = new Dictionary<string, Tag[]>();
+        // FIXME
+        // var tagDictionary = new Dictionary<string, Tag[]>();
 
-        foreach (var tags in block.Tags)
-        {
-            tagDictionary.Add(tags.Key, tags.Value);
-        }
+        // foreach (var tags in block.Tags)
+        // {
+        //     tagDictionary.Add(tags.Key, tags.Value);
+        // }
 
-        other.Tags = tagDictionary.ToArray();
+        // other.Tags = tagDictionary.ToArray();
 
         return other;
     }
@@ -53,17 +54,18 @@ public sealed class SourceCodeEntityParser
             Description = NormalizeText(block.Description),
         };
 
-        var tagDictionary = new Dictionary<string, Tag[]>();
+        // FIXME
+        // var tagDictionary = new Dictionary<string, Tag[]>();
 
         foreach (var tags in block.Tags)
         {
             if (tags.Key == "module")
                 module.Name = tags.Value.Single().Data;
-            else
-                tagDictionary.Add(tags.Key, tags.Value);
+            // else
+            //     tagDictionary.Add(tags.Key, tags.Value);
         }
 
-        module.Tags = tagDictionary.ToArray();
+        // module.Tags = tagDictionary.ToArray();
 
         return module;
     }
@@ -90,7 +92,8 @@ public sealed class SourceCodeEntityParser
 
         function.Overloads = overloadList.ToArray();
 
-        var tagDictionary = new Dictionary<string, Tag[]>();
+        // FIXME
+        // var tagDictionary = new Dictionary<string, Tag[]>();
 
         foreach (var tags in block.Tags)
         {
@@ -100,10 +103,10 @@ public sealed class SourceCodeEntityParser
             if (tags.Key == "param")
                 continue;
 
-            tagDictionary.Add(tags.Key, tags.Value);
+            // tagDictionary.Add(tags.Key, tags.Value);
         }
 
-        function.Tags = tagDictionary.ToArray();
+        // function.Tags = tagDictionary.ToArray();
 
         return function;
     }

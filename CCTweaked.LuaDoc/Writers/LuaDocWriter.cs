@@ -1,12 +1,12 @@
 using CCTweaked.LuaDoc.Entities;
 
-namespace CCTweaked.LuaDoc;
+namespace CCTweaked.LuaDoc.Writers;
 
-public sealed class EntityWriter : IDisposable
+public sealed class LuaDocWriter : IDisposable
 {
     private const int _threashold = 80;
     private const string _commentPrefix = "---";
-    private readonly StreamWriter _writer;
+    private readonly TextWriter _writer;
 
     private class Overload
     {
@@ -20,9 +20,13 @@ public sealed class EntityWriter : IDisposable
         public Return[] Returns { get; }
     }
 
-    public EntityWriter(string path)
+    public LuaDocWriter(string path) : this(new StreamWriter(path))
     {
-        _writer = new StreamWriter(path);
+    }
+
+    public LuaDocWriter(TextWriter writer)
+    {
+        _writer = writer;
     }
 
     public void Write(IEnumerable<Module> modules)

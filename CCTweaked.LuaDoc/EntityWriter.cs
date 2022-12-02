@@ -32,15 +32,15 @@ public sealed class EntityWriter : IDisposable
         if (!enumerator.MoveNext())
             throw new Exception();
 
-        WriteBaseModuleEntity(enumerator.Current);
+        WriteBaseModule(enumerator.Current);
 
         while (enumerator.MoveNext())
         {
-            WriteTypeModuleEntity(enumerator.Current);
+            WriteTypeModule(enumerator.Current);
         }
     }
 
-    private void WriteBaseModuleEntity(Module module)
+    private void WriteBaseModule(Module module)
     {
         if (module.IsType)
             throw new Exception();
@@ -50,6 +50,7 @@ public sealed class EntityWriter : IDisposable
 
         WriteDescription(module.Description);
         WriteSeeCollection(module.See);
+        WriteSource(module.Source);
 
         WriteCommentLine($"@class {module.Name}lib");
         _writer.WriteLine($"{module.Name} = {{}}");
@@ -58,13 +59,14 @@ public sealed class EntityWriter : IDisposable
         WriteDefinitions(module);
     }
 
-    private void WriteTypeModuleEntity(Module module)
+    private void WriteTypeModule(Module module)
     {
         if (!module.IsType)
             throw new Exception();
 
         WriteDescription(module.Description);
         WriteSeeCollection(module.See);
+        WriteSource(module.Source);
 
         WriteCommentLine($"@class {module.Name}");
         _writer.WriteLine($"local {module.Name} = {{}}");
@@ -96,6 +98,7 @@ public sealed class EntityWriter : IDisposable
     {
         WriteDescription(variable.Description);
         WriteSeeCollection(variable.See);
+        WriteSource(variable.Source);
 
         _writer.Write($"{module.Name}.{variable.Name}");
 
@@ -112,6 +115,7 @@ public sealed class EntityWriter : IDisposable
     {
         WriteDescription(function.Description);
         WriteSeeCollection(function.See);
+        WriteSource(function.Source);
 
         using var enumerator = CombineAllOverloads(function).GetEnumerator();
         enumerator.MoveNext();
@@ -249,6 +253,15 @@ public sealed class EntityWriter : IDisposable
             foreach (var see in seeCollection)
                 WriteCommentLine($"@see {see}");
 
+            WriteCommentLine(null);
+        }
+    }
+
+    private void WriteSource(string source)
+    {
+        if (!string.IsNullOrWhiteSpace(source))
+        {
+            WriteCommentLine($"@source {source}");
             WriteCommentLine(null);
         }
     }

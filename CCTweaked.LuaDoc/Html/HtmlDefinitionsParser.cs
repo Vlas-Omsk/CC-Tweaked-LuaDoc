@@ -40,6 +40,8 @@ internal sealed class HtmlDefinitionsParser
             isInstanceFunction = true;
         }
 
+        var source = _enumerator.Current.SelectNodes("*[@class='source-link']").SingleOrDefault()?.GetAttributeValue("href", null);
+
         if (!_enumerator.MoveToNextTaggedNode())
             throw new Exception();
 
@@ -54,16 +56,16 @@ internal sealed class HtmlDefinitionsParser
 
             if (match.Success)
             {
-                return new HtmlVariableParser(enumerator).ParseVariable(match.Groups[1].Value, match.Groups[2].Value);
+                return new HtmlVariableParser(enumerator).ParseVariable(match.Groups[1].Value, match.Groups[2].Value, source);
             }
             else
             {
                 match = Regex.Match(definitionName, @"^([a-zA-Z_0-9]+)\(");
 
                 if (match.Success)
-                    return new HtmlFunctionParser(enumerator).ParseFunction(match.Groups[1].Value, isInstanceFunction);
+                    return new HtmlFunctionParser(enumerator).ParseFunction(match.Groups[1].Value, isInstanceFunction, source);
                 else
-                    return new HtmlVariableParser(enumerator).ParseVariable(definitionName, null);
+                    return new HtmlVariableParser(enumerator).ParseVariable(definitionName, null, source);
             }
         }
     }

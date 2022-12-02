@@ -12,12 +12,13 @@ public sealed class HtmlVariableParser
         _enumerator = enumerator;
     }
 
-    public Variable ParseVariable(string name, string value)
+    public Variable ParseVariable(string name, string value, string source)
     {
         var variable = new Variable()
         {
             Name = name,
-            Value = value
+            Value = value,
+            Source = source
         };
 
         if (_enumerator.Current != null)

@@ -265,7 +265,7 @@ public sealed class LuaDocWriter : IDisposable
     {
         if (!string.IsNullOrWhiteSpace(source))
         {
-            WriteCommentLine($"@source {source}");
+            WriteCommentLine($"[View source]({source})");
             WriteCommentLine(null);
         }
     }

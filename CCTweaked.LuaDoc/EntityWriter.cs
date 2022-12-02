@@ -2,172 +2,293 @@ using CCTweaked.LuaDoc.Entities;
 
 namespace CCTweaked.LuaDoc;
 
-// public sealed class EntityWriter : IDisposable
-// {
-//     private const int _threashold = 80;
-//     private const string _commentPrefix = "---";
-//     private readonly StreamWriter _writer;
-//     private string _moduleName;
+public sealed class EntityWriter : IDisposable
+{
+    private const int _threashold = 80;
+    private const string _commentPrefix = "---";
+    private readonly StreamWriter _writer;
 
-//     public EntityWriter(string path)
-//     {
-//         _writer = new StreamWriter(path);
-//     }
+    private class Overload
+    {
+        public Overload(Parameter[] parameters, Return[] returns)
+        {
+            Parameters = parameters;
+            Returns = returns;
+        }
 
-//     public void Write(Entity[] entities)
-//     {
-//         var module = entities.OfType<Module>().First();
-//         _moduleName = module.Name;
-//         WriteModuleEntity(module);
+        public Parameter[] Parameters { get; }
+        public Return[] Returns { get; }
+    }
 
-//         foreach (var entity in entities)
-//         {
-//             if (entity == null)
-//                 continue;
+    public EntityWriter(string path)
+    {
+        _writer = new StreamWriter(path);
+    }
 
-//             if (entity is Function function)
-//                 WriteFunctionEntity(function);
-//             if (entity is Other other)
-//                 WriteOtherEntity(other);
-//         }
-//     }
+    public void Write(IEnumerable<Module> modules)
+    {
+        var enumerator = modules.GetEnumerator();
 
-//     private void WriteOtherEntity(Other other)
-//     {
-//         WriteDescription(other);
+        if (!enumerator.MoveNext())
+            throw new Exception();
 
-//         WriteTags(other);
-//         foreach (var line in other.Data)
-//             _writer.WriteLine(line);
-//         _writer.WriteLine();
-//     }
+        WriteBaseModuleEntity(enumerator.Current);
 
-//     private void WriteModuleEntity(Module module)
-//     {
-//         WriteCommentedLine("@meta");
-//         _writer.WriteLine();
+        while (enumerator.MoveNext())
+        {
+            WriteTypeModuleEntity(enumerator.Current);
+        }
+    }
 
-//         WriteDescription(module);
+    private void WriteBaseModuleEntity(Module module)
+    {
+        if (module.IsType)
+            throw new Exception();
 
-//         WriteCommentedLine($"@class {module.Name}lib");
-//         WriteTags(module);
-//         _writer.WriteLine($"{module.Name} = {{}}");
-//         _writer.WriteLine();
-//     }
+        WriteCommentLine("@meta");
+        _writer.WriteLine();
 
-//     private void WriteFunctionEntity(Function function)
-//     {
-//         WriteDescription(function);
+        WriteModuleEntity(module, module.Name + "lib");
+    }
 
-//         if (function.Overloads.Length > 0)
-//         {
-//             foreach (var param in function.Overloads[0].Params)
-//             {
-//                 var line = $"@param {param.Name}";
+    private void WriteTypeModuleEntity(Module module)
+    {
+        if (!module.IsType)
+            throw new Exception();
 
-//                 if (param.Optional)
-//                     line += '?';
+        WriteModuleEntity(module, module.Name);
+    }
 
-//                 WriteCommentedLine($"{line} {param.Type} {param.Description}");
-//             }
+    private void WriteModuleEntity(Module module, string className)
+    {
+        WriteDescription(module.Description);
+        WriteSeeCollection(module.See);
 
-//             foreach (var @return in function.Overloads[0].Returns)
-//             {
-//                 var name = @return.Name;
+        WriteCommentLine($"@class {className}");
+        _writer.WriteLine($"{module.Name} = {{}}");
+        _writer.WriteLine();
 
-//                 if (string.IsNullOrEmpty(name))
-//                     name = ".";
+        foreach (var definition in module.Definitions)
+        {
+            if (definition is Function function)
+            {
+                WriteFunction(module, function);
+            }
+            else if (definition is Variable variable)
+            {
+                WriteVariable(module, variable);
+            }
+            else
+            {
+                throw new Exception();
+            }
+        }
+    }
 
-//                 WriteCommentedLine($"@return {@return.Type} {name} {@return.Description}");
-//             }
-//         }
-//         WriteTags(function);
-//         if (function.Name.Contains('.'))
-//             _writer.Write($"function {function.Name}(");
-//         else
-//             _writer.Write($"function {_moduleName}.{function.Name}(");
-//         if (function.Overloads.Length > 0)
-//             _writer.Write(string.Join(", ", function.Overloads[0].Params.Select(x => x.Name)));
-//         _writer.WriteLine(") end");
-//         _writer.WriteLine();
-//     }
+    private void WriteVariable(Module module, Variable variable)
+    {
+        WriteDescription(variable.Description);
+        WriteSeeCollection(variable.See);
 
-//     private void WriteDescription(Entity entity)
-//     {
-//         if (entity.Description != null)
-//         {
-//             WriteCommentedText(entity.Description);
-//             WriteCommentedLine(null);
-//         }
-//     }
+        _writer.Write($"{module.Name}.{variable.Name}");
 
-//     // FIXME
-//     private void WriteTags(Entity entity)
-//     {
-//         // foreach (var tags in entity.Tags)
-//         // {
-//         //     foreach (var tag in tags.Value)
-//         //     {
-//         //         var line = '@' + tags.Key;
+        if (!string.IsNullOrWhiteSpace(variable.Value))
+            _writer.Write($" = {variable.Value}");
 
-//         //         if (tag.Params.Length > 0)
-//         //             line += string.Join(",", tag.Params.Select(x =>
-//         //             {
-//         //                 var param = x.Key;
+        _writer.WriteLine();
+        _writer.WriteLine();
+    }
 
-//         //                 if (!string.IsNullOrEmpty(x.Value))
-//         //                     param += "=" + x.Value;
+    private void WriteFunction(Module module, Function function)
+    {
+        WriteDescription(function.Description);
+        WriteSeeCollection(function.See);
 
-//         //                 return param;
-//         //             }));
+        using var enumerator = CombineAllOverloads(function).GetEnumerator();
+        enumerator.MoveNext();
 
-//         //         if (!string.IsNullOrEmpty(tag.Data))
-//         //             line += " " + tag.Data;
+        var firstOverload = enumerator.Current;
 
-//         //         WriteCommentedLine(line);
-//         //     }
-//         // }
-//     }
+        while (enumerator.MoveNext())
+        {
+            WriteComment("@overload fun(");
+            _writer.Write(string.Join(", ", enumerator.Current.Parameters.Select(x =>
+            {
+                var (name, type) = GetParameterPresentation(x);
 
-//     private void WriteCommentedText(string text)
-//     {
-//         var lines = text.Split(Environment.NewLine);
+                return $"{name} : {type}";
+            })));
+            _writer.Write(")");
 
-//         foreach (var currentLine in lines)
-//         {
-//             var words = currentLine.Split(' ');
-//             string line = null;
+            if (enumerator.Current.Returns.Length > 0)
+            {
+                _writer.Write(" : ");
+                _writer.Write(string.Join(", ", enumerator.Current.Returns.Select(x => x.Type)));
+            }
 
-//             foreach (var word in words)
-//             {
-//                 if ((line?.Length ?? 0) + word.Length + 1 > _threashold)
-//                 {
-//                     WriteCommentedLine(line);
-//                     line = word;
-//                 }
-//                 else
-//                 {
-//                     if (line == null)
-//                         line = word;
-//                     else
-//                         line += ' ' + word;
-//                 }
-//             }
+            _writer.WriteLine();
+        }
 
-//             WriteCommentedLine(line);
-//         }
-//     }
+        var parameters = CollectAllParameters(function);
 
-//     private void WriteCommentedLine(string line)
-//     {
-//         _writer.Write(_commentPrefix);
-//         if (line != null)
-//             _writer.Write(line.Replace(Environment.NewLine, " "));
-//         _writer.WriteLine();
-//     }
+        foreach (var param in parameters)
+        {
+            var (name, type) = GetParameterPresentation(param);
 
-//     public void Dispose()
-//     {
-//         _writer.Dispose();
-//     }
-// }
+            WriteCommentLine($"@param {name} {type} Default: `{param.DefaultValue}`. {param.Description}");
+        }
+
+        if (firstOverload != null && firstOverload.Returns.Length > 0)
+        {
+            foreach (var @return in firstOverload.Returns)
+                WriteCommentLine($"@return {@return.Type} . {@return.Description}");
+        }
+
+        _writer.Write($"function {module.Name}.{function.Name}(");
+
+        if (firstOverload != null && firstOverload.Parameters.Length > 0)
+            _writer.Write(string.Join(", ", firstOverload.Parameters.Select(x => x.Name)));
+
+        _writer.WriteLine(") end");
+        _writer.WriteLine();
+    }
+
+    private (string name, string type) GetParameterPresentation(Parameter parameter)
+    {
+        var name = parameter.Name;
+
+        if (parameter.Optional)
+            name += '?';
+
+        var type = parameter.Type;
+
+        if (string.IsNullOrWhiteSpace(type))
+            type = "any";
+
+        return (name, type);
+    }
+
+    private IEnumerable<Overload> CombineAllOverloads(Function function)
+    {
+        if (function.ParametersOverloads.Length > 0)
+        {
+            foreach (var parameters in function.ParametersOverloads)
+            {
+                if (function.ReturnsOverloads.Length > 0)
+                {
+                    foreach (var returns in function.ReturnsOverloads)
+                    {
+                        yield return new Overload(parameters.Items, returns.Items);
+                    }
+                }
+                else
+                {
+                    yield return new Overload(parameters.Items, Array.Empty<Return>());
+                }
+            }
+        }
+        else
+        {
+            foreach (var returns in function.ReturnsOverloads)
+            {
+                yield return new Overload(Array.Empty<Parameter>(), returns.Items);
+            }
+        }
+    }
+
+    private IEnumerable<Parameter> CollectAllParameters(Function function)
+    {
+        var result = new List<Parameter>();
+
+        foreach (var parametersOverload in function.ParametersOverloads)
+        {
+            foreach (var parameter in parametersOverload.Items)
+            {
+                var find = result.FirstOrDefault(x => x.Name == parameter.Name);
+
+                if (find != null)
+                {
+                    if (
+                        find.Description != parameter.Description ||
+                        find.Optional != parameter.Optional ||
+                        find.Type != parameter.Type
+                    )
+                        throw new Exception("Ambiguous match");
+
+                    continue;
+                }
+
+                result.Add(parameter);
+            }
+        }
+
+        return result.ToArray();
+    }
+
+    private void WriteSeeCollection(string[] seeCollection)
+    {
+        if (seeCollection != null)
+        {
+            foreach (var see in seeCollection)
+                WriteCommentLine($"@see {see}");
+
+            WriteCommentLine(null);
+        }
+    }
+
+    private void WriteDescription(string description)
+    {
+        if (!string.IsNullOrWhiteSpace(description))
+        {
+            WriteCommentText(description);
+            WriteCommentLine(null);
+        }
+    }
+
+    private void WriteCommentText(string text)
+    {
+        var lines = text.Split(Environment.NewLine);
+
+        foreach (var currentLine in lines)
+        {
+            var words = currentLine.Split(' ');
+            string line = null;
+
+            foreach (var word in words)
+            {
+                if ((line?.Length ?? 0) + word.Length + 1 > _threashold)
+                {
+                    WriteCommentLine(line);
+                    line = word;
+                }
+                else
+                {
+                    if (line == null)
+                        line = word;
+                    else
+                        line += ' ' + word;
+                }
+            }
+
+            WriteCommentLine(line);
+        }
+    }
+
+    private void WriteCommentLine(string line)
+    {
+        WriteComment(line);
+        _writer.WriteLine();
+    }
+
+    private void WriteComment(string line)
+    {
+        _writer.Write(_commentPrefix);
+        if (line != null)
+            _writer.Write(line.ReplaceLineEndings(" "));
+    }
+
+    public void Dispose()
+    {
+        _writer.Dispose();
+    }
+}

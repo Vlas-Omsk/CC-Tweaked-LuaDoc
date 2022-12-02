@@ -40,7 +40,7 @@ public sealed class HtmlModulesParser
         if (_enumerator.Current.Name != "h1")
             throw new Exception();
 
-        return ParseModule(_enumerator.Current.InnerText);
+        return ParseModule(_enumerator.Current.InnerText, false);
     }
 
     private Module ParseTypeModule()
@@ -48,14 +48,15 @@ public sealed class HtmlModulesParser
         if (_enumerator.Current.Name != "h3")
             throw new Exception();
 
-        return ParseModule(_enumerator.Current.SelectNodes("span").Single().InnerText);
+        return ParseModule(_enumerator.Current.SelectNodes("span").Single().InnerText, true);
     }
 
-    private Module ParseModule(string name)
+    private Module ParseModule(string name, bool isType)
     {
         var module = new Module()
         {
-            Name = name
+            Name = name,
+            IsType = isType
         };
 
         if (!_enumerator.MoveToNextTaggedNode())

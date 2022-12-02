@@ -39,7 +39,7 @@ internal sealed class HtmlDefinitionsParser
         {
             enumerator.MoveToNextTaggedNode();
 
-            var match = Regex.Match(definitionNameNode.InnerText, @"([a-zA-Z_0-9]+)\s*=\s*(.+)");
+            var match = Regex.Match(definitionNameNode.InnerText, @"^([a-zA-Z_0-9]+)\s*=\s*(.+)");
 
             if (match.Success)
             {
@@ -47,7 +47,7 @@ internal sealed class HtmlDefinitionsParser
             }
             else
             {
-                match = Regex.Match(definitionNameNode.InnerText, @"([a-zA-Z_0-9]+)\(");
+                match = Regex.Match(definitionNameNode.InnerText, @"^([a-zA-Z_0-9]+)\(");
 
                 if (match.Success)
                     return new HtmlFunctionParser(enumerator).ParseFunction(match.Groups[1].Value);

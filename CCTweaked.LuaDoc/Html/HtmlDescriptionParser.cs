@@ -34,10 +34,10 @@ internal sealed class HtmlDescriptionParser
                     textToAdd = _enumerator.Current.InnerText.Trim().ReplaceLineEndings(" ");
                     break;
                 case "code":
-                    textToAdd = $" `{_enumerator.Current.InnerText.Trim()}`";
+                    textToAdd = $" `{_enumerator.Current.InnerText.Trim()}` ";
                     break;
                 case "a":
-                    textToAdd = $" {_enumerator.Current.InnerText.Trim()}";
+                    textToAdd = $" {_enumerator.Current.InnerText.Trim()} ";
                     break;
                 case "span":
                     textToAdd = _enumerator.Current.InnerText.Trim();
@@ -52,7 +52,7 @@ internal sealed class HtmlDescriptionParser
                     break;
                 case "h2":
                 case "strong":
-                    textToAdd = $" <b>{_enumerator.Current.InnerText}</b>";
+                    textToAdd = $" <b>{_enumerator.Current.InnerText}</b> ";
                     break;
                 case "ul":
                     bool first = true;

@@ -6,9 +6,15 @@ public static class Program
 {
     private static void Main(string[] args)
     {
-        foreach (var file in GetFiles("/mnt/DATA/GitBuh/CC-Tweaked/build/illuaminate/module"))
+        Directory.CreateDirectory("cc_libs");
+
+        foreach (var filePath in GetFiles("/mnt/DATA/GitBuh/CC-Tweaked/build/illuaminate/module"))
         {
-            var arrays = new HtmlModulesParser(file).ParseModules().ToArray();
+            var modules = new HtmlModulesParser(filePath).ParseModules();
+            var fileName = Path.GetFileNameWithoutExtension(filePath);
+
+            using var writer = new EntityWriter(Path.Combine("cc_libs", fileName + ".lua"));
+            writer.Write(modules);
         }
     }
 

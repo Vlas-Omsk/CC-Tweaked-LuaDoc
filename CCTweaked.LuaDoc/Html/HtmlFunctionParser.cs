@@ -33,23 +33,23 @@ public sealed class HtmlFunctionParser
                 {
                     case SectionType.Parameters:
                         {
-                            var overloads = ((IEnumerable<Parameter>)section.Data).ToArray();
+                            var items = ((IEnumerable<Parameter>)section.Data).ToArray();
 
-                            if (overloads.Length > 0)
+                            if (items.Length > 0)
                                 parametersOverloads.Add(new Overload<Parameter>()
                                 {
-                                    Overloads = overloads
+                                    Items = items
                                 });
                             break;
                         }
                     case SectionType.Returns:
                         {
-                            var overloads = ((IEnumerable<Return>)section.Data).ToArray();
+                            var items = ((IEnumerable<Return>)section.Data).ToArray();
 
-                            if (overloads.Length > 0)
+                            if (items.Length > 0)
                                 returnsOverloads.Add(new Overload<Return>()
                                 {
-                                    Overloads = overloads
+                                    Items = items
                                 });
                             break;
                         }
@@ -61,6 +61,11 @@ public sealed class HtmlFunctionParser
 
             function.ParametersOverloads = parametersOverloads.ToArray();
             function.ReturnsOverloads = returnsOverloads.ToArray();
+        }
+        else
+        {
+            function.ParametersOverloads = Array.Empty<Overload<Parameter>>();
+            function.ReturnsOverloads = Array.Empty<Overload<Return>>();
         }
 
         return function;

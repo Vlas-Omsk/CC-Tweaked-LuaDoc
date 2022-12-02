@@ -36,7 +36,7 @@ public sealed class HtmlSectionsParser
             {
                 yield return new HtmlSection(SectionType.SeeCollection, ParseSee());
             }
-            else if (section == "Changes" || section == "Usage")
+            else if (section == "Changes" || section == "Usage" || section == "Throws")
             {
                 if (!_enumerator.MoveToNextTaggedNode())
                     throw new Exception();

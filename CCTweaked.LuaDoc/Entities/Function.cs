@@ -9,7 +9,7 @@ public sealed class Function : Entity, IDefinition
 
 public sealed class Overload<T>
 {
-    public T[] Overloads { get; set; }
+    public T[] Items { get; set; }
 }
 
 public sealed class Parameter
@@ -18,6 +18,7 @@ public sealed class Parameter
     public bool Optional { get; set; }
     public string Type { get; set; }
     public string Description { get; set; }
+    public string DefaultValue { get; set; }
 }
 
 public sealed class Return

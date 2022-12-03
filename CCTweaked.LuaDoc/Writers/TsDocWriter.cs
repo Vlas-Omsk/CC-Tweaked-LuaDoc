@@ -144,15 +144,15 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
                 result = $"_{result}";
             }
 
-            var hasDefaultValue = !string.IsNullOrWhiteSpace(x.DefaultValue);
+            // var hasDefaultValue = !string.IsNullOrWhiteSpace(x.DefaultValue);
 
-            if (x.Optional && !hasDefaultValue)
+            if (x.Optional)
                 result += "?";
 
             result += ": " + type;
 
-            if (hasDefaultValue)
-                result += " = " + x.DefaultValue;
+            // if (hasDefaultValue)
+            //     result += " = " + x.DefaultValue;
 
             return result;
         }));

@@ -62,6 +62,7 @@ internal sealed class HtmlDescriptionParser
                     textToAdd = $"**{_enumerator.Current.InnerText}**";
                     break;
                 case "ul":
+                case "ol":
                     bool first = true;
 
                     textToAdd = string.Empty;
@@ -162,6 +163,7 @@ internal sealed class HtmlDescriptionParser
             node.Name == "pre" ||
             node.Name == "h2" ||
             node.Name == "ul" ||
+            node.Name == "ol" ||
             node.Name == "strong";
     }
 }

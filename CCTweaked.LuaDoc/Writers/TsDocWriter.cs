@@ -228,7 +228,7 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
 
         ExitComment();
 
-        if (isMember)
+        if (!isMember)
             Write("export ");
 
         Write($"const {variable.Name}");

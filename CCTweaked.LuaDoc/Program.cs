@@ -5,22 +5,46 @@ namespace CCTweaked.LuaDoc;
 
 public static class Program
 {
+    private const string _htmlDocsDirectory = "/mnt/DATA/GitBuh/CC-Tweaked/build/illuaminate/module";
+
     private static void Main(string[] args)
+    {
+        GenerateLuaDocs();
+
+        GenerateTsDocs();
+    }
+
+    private static void GenerateLuaDocs()
     {
         Directory.CreateDirectory("cc_libs_ts");
 
-        foreach (var filePath in GetFiles("/mnt/DATA/GitBuh/CC-Tweaked/build/illuaminate/module"))
+        using var indexWriter = new StreamWriter(Path.Combine("cc_libs_ts", "index.d.ts"));
+
+        // indexWriter.WriteLine("/// <reference types=\"@typescript-to-lua/language-extensions\" />");
+        // indexWriter.WriteLine();
+
+        foreach (var filePath in GetFiles(_htmlDocsDirectory))
         {
             var modules = new HtmlModulesParser(filePath).ParseModules();
             var fileName = Path.GetFileNameWithoutExtension(filePath);
 
-            using var writer = new TsDocWriter(Path.Combine("cc_libs_ts", fileName + ".ts"));
+            using var writer = new TsDocWriter(Path.Combine("cc_libs_ts", fileName + ".d.ts"));
             writer.Write(modules);
-        }
 
+            var relativeDirectory = Path.GetRelativePath(_htmlDocsDirectory, Path.GetDirectoryName(filePath));
+
+            if (relativeDirectory[0] != '.')
+                relativeDirectory = $"./{relativeDirectory}";
+
+            indexWriter.WriteLine($"/// <reference path=\"{relativeDirectory}/{fileName}.d.ts\" />");
+        }
+    }
+
+    private static void GenerateTsDocs()
+    {
         Directory.CreateDirectory("cc_libs_lua");
 
-        foreach (var filePath in GetFiles("/mnt/DATA/GitBuh/CC-Tweaked/build/illuaminate/module"))
+        foreach (var filePath in GetFiles(_htmlDocsDirectory))
         {
             var modules = new HtmlModulesParser(filePath).ParseModules();
             var fileName = Path.GetFileNameWithoutExtension(filePath);

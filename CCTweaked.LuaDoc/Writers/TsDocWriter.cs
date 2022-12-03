@@ -30,6 +30,9 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
         if (enumerator.Current.IsType)
             throw new Exception();
 
+        WriteLine("/** @noSelfInFile */");
+        WriteLine(null);
+
         EnterComment();
 
         WriteDescription(enumerator.Current.Description);

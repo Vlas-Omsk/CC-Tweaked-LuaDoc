@@ -1,3 +1,4 @@
+using CCTweaked.LuaDoc.Entities;
 using HtmlAgilityPack;
 
 namespace CCTweaked.LuaDoc.Html;
@@ -11,16 +12,24 @@ internal sealed class HtmlSeeParser
         _enumerator = enumerator;
     }
 
-    public string ParseSee()
+    public See ParseSee()
     {
         if (_enumerator.Current.Name != "strong")
             throw new Exception();
 
+        var see = new See();
         var text = _enumerator.Current.InnerText;
 
         if (_enumerator.MoveNext())
-            text += " " + new HtmlDescriptionParser(_enumerator).ParseDescription();
+        {
+            see.Link = text;
+            see.Description = new HtmlDescriptionParser(_enumerator).ParseDescription();
+        }
+        else
+        {
+            see.Description = text;
+        }
 
-        return text;
+        return see;
     }
 }

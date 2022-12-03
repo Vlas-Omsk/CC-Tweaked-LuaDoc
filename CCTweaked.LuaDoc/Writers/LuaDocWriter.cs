@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using CCTweaked.LuaDoc.Entities;
 
 namespace CCTweaked.LuaDoc.Writers;
@@ -7,18 +8,6 @@ public sealed class LuaDocWriter : IDocWriter, IDisposable
     private const int _threashold = 80;
     private const string _commentPrefix = "---";
     private readonly TextWriter _writer;
-
-    private class Overload
-    {
-        public Overload(Parameter[] parameters, Return[] returns)
-        {
-            Parameters = parameters;
-            Returns = returns;
-        }
-
-        public Parameter[] Parameters { get; }
-        public Return[] Returns { get; }
-    }
 
     public LuaDocWriter(string path) : this(new StreamWriter(path))
     {
@@ -55,8 +44,8 @@ public sealed class LuaDocWriter : IDocWriter, IDisposable
         _writer.WriteLine();
 
         WriteDescription(module.Description);
-        WriteSeeCollection(module.See);
         WriteSource(module.Source);
+        WriteSeeCollection(module.See);
 
         WriteCommentLine($"@class {module.Name}lib");
         _writer.WriteLine($"{module.Name} = {{}}");
@@ -71,8 +60,8 @@ public sealed class LuaDocWriter : IDocWriter, IDisposable
             throw new Exception();
 
         WriteDescription(module.Description);
-        WriteSeeCollection(module.See);
         WriteSource(module.Source);
+        WriteSeeCollection(module.See);
 
         WriteCommentLine($"@class {module.Name}");
         _writer.WriteLine($"local {module.Name} = {{}}");
@@ -105,8 +94,8 @@ public sealed class LuaDocWriter : IDocWriter, IDisposable
     private void WriteVariable(Module module, Variable variable)
     {
         WriteDescription(variable.Description);
-        WriteSeeCollection(variable.See);
         WriteSource(variable.Source);
+        WriteSeeCollection(variable.See);
 
         _writer.Write($"{module.Name}.{variable.Name}");
 
@@ -122,10 +111,10 @@ public sealed class LuaDocWriter : IDocWriter, IDisposable
     private void WriteFunction(Module module, Function function)
     {
         WriteDescription(function.Description);
-        WriteSeeCollection(function.See);
         WriteSource(function.Source);
+        WriteSeeCollection(function.See);
 
-        using var enumerator = CombineAllOverloads(function).GetEnumerator();
+        using var enumerator = function.CombineAllOverloads().GetEnumerator();
         enumerator.MoveNext();
 
         var firstOverload = enumerator.Current;
@@ -144,13 +133,13 @@ public sealed class LuaDocWriter : IDocWriter, IDisposable
             if (enumerator.Current.Returns.Length > 0)
             {
                 _writer.Write(" : ");
-                _writer.Write(string.Join(", ", enumerator.Current.Returns.Select(x => x.Type)));
+                _writer.Write(string.Join(", ", enumerator.Current.Returns.Select(x => ConvertToLuaType(x.Type))));
             }
 
             _writer.WriteLine();
         }
 
-        var parameters = CollectAllParameters(function);
+        var parameters = function.CollectAllParameters();
 
         foreach (var param in parameters)
         {
@@ -167,15 +156,19 @@ public sealed class LuaDocWriter : IDocWriter, IDisposable
             _writer.WriteLine();
         }
 
-        if (firstOverload != null && firstOverload.Returns.Length > 0)
+        if (firstOverload.Returns.Length > 0)
         {
             foreach (var @return in firstOverload.Returns)
-                WriteCommentLine($"@return {(string.IsNullOrWhiteSpace(@return.Type) ? "any" : @return.Type)} . {@return.Description.ReplaceLineEndings(" ")}");
+            {
+                var type = ConvertToLuaType(@return.Type);
+
+                WriteCommentLine($"@return {(type)} . {@return.Description.ReplaceLineEndings(" ")}");
+            }
         }
 
         _writer.Write($"function {module.Name}{(function.IsInstance ? ':' : '.')}{function.Name}(");
 
-        if (firstOverload != null && firstOverload.Parameters.Length > 0)
+        if (firstOverload.Parameters.Length > 0)
             _writer.Write(string.Join(", ", firstOverload.Parameters.Select(x => x.Name)));
 
         _writer.WriteLine(") end");
@@ -189,77 +182,32 @@ public sealed class LuaDocWriter : IDocWriter, IDisposable
         if (parameter.Optional)
             name += '?';
 
-        var type = parameter.Type;
-
-        if (string.IsNullOrWhiteSpace(type))
-            type = "any";
+        var type = ConvertToLuaType(parameter.Type);
 
         return (name, type);
     }
 
-    private IEnumerable<Overload> CombineAllOverloads(Function function)
-    {
-        if (function.ParametersOverloads.Length > 0)
-        {
-            foreach (var parameters in function.ParametersOverloads)
-            {
-                if (function.ReturnsOverloads.Length > 0)
-                {
-                    foreach (var returns in function.ReturnsOverloads)
-                    {
-                        yield return new Overload(parameters.Items, returns.Items);
-                    }
-                }
-                else
-                {
-                    yield return new Overload(parameters.Items, Array.Empty<Return>());
-                }
-            }
-        }
-        else
-        {
-            foreach (var returns in function.ReturnsOverloads)
-            {
-                yield return new Overload(Array.Empty<Parameter>(), returns.Items);
-            }
-        }
-    }
-
-    private IEnumerable<Parameter> CollectAllParameters(Function function)
-    {
-        var result = new List<Parameter>();
-
-        foreach (var parametersOverload in function.ParametersOverloads)
-        {
-            foreach (var parameter in parametersOverload.Items)
-            {
-                var find = result.FirstOrDefault(x => x.Name == parameter.Name);
-
-                if (find != null)
-                {
-                    if (
-                        find.Description != parameter.Description ||
-                        find.Optional != parameter.Optional ||
-                        find.Type != parameter.Type
-                    )
-                        throw new Exception("Ambiguous match");
-
-                    continue;
-                }
-
-                result.Add(parameter);
-            }
-        }
-
-        return result.ToArray();
-    }
-
-    private void WriteSeeCollection(string[] seeCollection)
+    private void WriteSeeCollection(See[] seeCollection)
     {
         if (seeCollection != null)
         {
             foreach (var see in seeCollection)
                 WriteCommentLine($"@see {see}");
+
+            foreach (var see in seeCollection)
+            {
+                WriteComment($"@see");
+
+                if (!string.IsNullOrWhiteSpace(see.Link))
+                    WriteComment($" {see.Link}");
+                else
+                    WriteComment(" .");
+
+                if (!string.IsNullOrWhiteSpace(see.Description))
+                    WriteComment(see.Description);
+
+                WriteCommentLine(null);
+            }
 
             WriteCommentLine(null);
         }
@@ -323,6 +271,18 @@ public sealed class LuaDocWriter : IDocWriter, IDisposable
         _writer.Write(_commentPrefix);
         if (line != null)
             _writer.Write(line.ReplaceLineEndings(" "));
+    }
+
+    private static string ConvertToLuaType(string type)
+    {
+        if (string.IsNullOrWhiteSpace(type))
+            type = "any";
+
+        type = type.Replace("function(", "fun(");
+        type = Regex.Replace(type, @"([\[a-zA-Z\]?]+)\s*=", x => $"{x.Groups[1].Value}:");
+        type = Regex.Replace(type, @"{\s*(.+)\.\.\.\s*}", x => $"{{ [number]: {x.Groups[1].Value} }}");
+
+        return type;
     }
 
     public void Dispose()

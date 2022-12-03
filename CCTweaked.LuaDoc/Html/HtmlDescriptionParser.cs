@@ -59,7 +59,7 @@ internal sealed class HtmlDescriptionParser
                     break;
                 case "h2":
                 case "strong":
-                    textToAdd = $"<b>{_enumerator.Current.InnerText}</b>";
+                    textToAdd = $"**{_enumerator.Current.InnerText}**";
                     break;
                 case "ul":
                     bool first = true;
@@ -119,16 +119,16 @@ internal sealed class HtmlDescriptionParser
         switch (admonitionType)
         {
             case "tip":
-                text += "<b>Tip</b>";
+                text += " - **Tip**";
                 break;
             case "note":
-                text += "<b>Note</b>";
+                text += " - **Note**";
                 break;
             case "caution":
-                text += "<b>Caution</b>";
+                text += " - **Caution**";
                 break;
             case "info":
-                text += "<b>Info</b>";
+                text += " - **Info**";
                 break;
             default:
                 throw new Exception();

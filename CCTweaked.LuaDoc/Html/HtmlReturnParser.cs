@@ -26,7 +26,7 @@ internal sealed class HtmlReturnParser
 
         if (_enumerator.Current != null && _enumerator.Current.Name == "span" && _enumerator.Current.GetClasses().Single() == "type")
         {
-            @return.Type = TypeUtils.NormalizeType(HttpUtility.HtmlDecode(_enumerator.Current.InnerText));
+            @return.Type = HttpUtility.HtmlDecode(_enumerator.Current.InnerText);
             _enumerator.MoveNext();
         }
 

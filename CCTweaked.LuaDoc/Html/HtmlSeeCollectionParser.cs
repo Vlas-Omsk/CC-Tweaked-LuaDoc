@@ -1,3 +1,4 @@
+using CCTweaked.LuaDoc.Entities;
 using HtmlAgilityPack;
 
 namespace CCTweaked.LuaDoc.Html;
@@ -11,7 +12,7 @@ internal sealed class HtmlSeeCollectionParser
         _enumerator = enumerator;
     }
 
-    public IEnumerable<string> ParseSeeCollection()
+    public IEnumerable<See> ParseSeeCollection()
     {
         do
         {

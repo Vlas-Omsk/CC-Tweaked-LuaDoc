@@ -26,8 +26,8 @@ internal sealed class HtmlFunctionParser
 
         if (_enumerator.Current != null)
         {
-            var parametersOverloads = new List<Overload<Parameter>>();
-            var returnsOverloads = new List<Overload<Return>>();
+            var parametersOverloads = new List<OverloadCollection<Parameter>>();
+            var returnsOverloads = new List<OverloadCollection<Return>>();
 
             foreach (var section in new HtmlSectionsParser(_enumerator).ParseSections())
             {
@@ -38,7 +38,7 @@ internal sealed class HtmlFunctionParser
                             var items = ((IEnumerable<Parameter>)section.Data).ToArray();
 
                             if (items.Length > 0)
-                                parametersOverloads.Add(new Overload<Parameter>()
+                                parametersOverloads.Add(new OverloadCollection<Parameter>()
                                 {
                                     Items = items
                                 });
@@ -49,14 +49,14 @@ internal sealed class HtmlFunctionParser
                             var items = ((IEnumerable<Return>)section.Data).ToArray();
 
                             if (items.Length > 0)
-                                returnsOverloads.Add(new Overload<Return>()
+                                returnsOverloads.Add(new OverloadCollection<Return>()
                                 {
                                     Items = items
                                 });
                             break;
                         }
                     case HtmlSectionType.SeeCollection:
-                        function.See = ((IEnumerable<string>)section.Data).ToArray();
+                        function.See = ((IEnumerable<See>)section.Data).ToArray();
                         break;
                 }
             }
@@ -66,8 +66,8 @@ internal sealed class HtmlFunctionParser
         }
         else
         {
-            function.ParametersOverloads = Array.Empty<Overload<Parameter>>();
-            function.ReturnsOverloads = Array.Empty<Overload<Return>>();
+            function.ParametersOverloads = Array.Empty<OverloadCollection<Parameter>>();
+            function.ReturnsOverloads = Array.Empty<OverloadCollection<Return>>();
         }
 
         return function;

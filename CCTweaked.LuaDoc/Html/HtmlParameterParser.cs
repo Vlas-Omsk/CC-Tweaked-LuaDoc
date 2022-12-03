@@ -33,7 +33,7 @@ internal sealed class HtmlParameterParser
 
         if (_enumerator.Current != null && _enumerator.Current.Name == "span" && _enumerator.Current.GetClasses().Single() == "type")
         {
-            parameter.Type = TypeUtils.NormalizeType(HttpUtility.HtmlDecode(_enumerator.Current.InnerText));
+            parameter.Type = HttpUtility.HtmlDecode(_enumerator.Current.InnerText);
             _enumerator.MoveNext();
         }
 

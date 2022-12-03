@@ -70,7 +70,7 @@ public sealed class HtmlModulesParser
         foreach (var section in new HtmlSectionsParser(_enumerator).ParseSections())
         {
             if (section.Type == HtmlSectionType.SeeCollection)
-                module.See = ((IEnumerable<string>)section.Data).ToArray();
+                module.See = ((IEnumerable<See>)section.Data).ToArray();
             else
                 throw new Exception();
         }

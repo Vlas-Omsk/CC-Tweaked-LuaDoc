@@ -79,7 +79,7 @@ internal sealed class HtmlSectionsParser
         }
     }
 
-    private IEnumerable<string> ParseSee()
+    private IEnumerable<See> ParseSee()
     {
         if (!_enumerator.MoveToNextTaggedNode())
             throw new Exception();

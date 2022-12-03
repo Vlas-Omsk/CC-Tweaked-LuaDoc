@@ -20,9 +20,6 @@ public static class Program
 
         using var indexWriter = new StreamWriter(Path.Combine("cc_libs_ts", "index.d.ts"));
 
-        // indexWriter.WriteLine("/// <reference types=\"@typescript-to-lua/language-extensions\" />");
-        // indexWriter.WriteLine();
-
         foreach (var filePath in GetFiles(_htmlDocsDirectory))
         {
             var modules = new HtmlModulesParser(filePath).ParseModules();

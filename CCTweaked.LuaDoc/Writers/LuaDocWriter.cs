@@ -2,7 +2,7 @@ using CCTweaked.LuaDoc.Entities;
 
 namespace CCTweaked.LuaDoc.Writers;
 
-public sealed class LuaDocWriter : IDisposable
+public sealed class LuaDocWriter : IDocWriter, IDisposable
 {
     private const int _threashold = 80;
     private const string _commentPrefix = "---";
@@ -31,16 +31,18 @@ public sealed class LuaDocWriter : IDisposable
 
     public void Write(IEnumerable<Module> modules)
     {
-        var enumerator = modules.GetEnumerator();
+        using var enumerator = modules.GetEnumerator();
 
         if (!enumerator.MoveNext())
             throw new Exception();
 
-        WriteBaseModule(enumerator.Current);
+        var baseModule = enumerator.Current;
+
+        WriteBaseModule(baseModule);
 
         while (enumerator.MoveNext())
         {
-            WriteTypeModule(enumerator.Current);
+            WriteTypeModule(baseModule, enumerator.Current);
         }
     }
 
@@ -63,7 +65,7 @@ public sealed class LuaDocWriter : IDisposable
         WriteDefinitions(module);
     }
 
-    private void WriteTypeModule(Module module)
+    private void WriteTypeModule(Module baseModule, Module module)
     {
         if (!module.IsType)
             throw new Exception();
@@ -74,6 +76,8 @@ public sealed class LuaDocWriter : IDisposable
 
         WriteCommentLine($"@class {module.Name}");
         _writer.WriteLine($"local {module.Name} = {{}}");
+        _writer.WriteLine();
+        WriteCommentLine($"@alias {baseModule.Name}.{module.Name} {module.Name}");
         _writer.WriteLine();
 
         WriteDefinitions(module);

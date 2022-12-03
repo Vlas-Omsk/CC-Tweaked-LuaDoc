@@ -7,14 +7,25 @@ public static class Program
 {
     private static void Main(string[] args)
     {
-        Directory.CreateDirectory("cc_libs");
+        Directory.CreateDirectory("cc_libs_ts");
 
         foreach (var filePath in GetFiles("/mnt/DATA/GitBuh/CC-Tweaked/build/illuaminate/module"))
         {
             var modules = new HtmlModulesParser(filePath).ParseModules();
             var fileName = Path.GetFileNameWithoutExtension(filePath);
 
-            using var writer = new LuaDocWriter(Path.Combine("cc_libs", fileName + ".lua"));
+            using var writer = new TsDocWriter(Path.Combine("cc_libs_ts", fileName + ".ts"));
+            writer.Write(modules);
+        }
+
+        Directory.CreateDirectory("cc_libs_lua");
+
+        foreach (var filePath in GetFiles("/mnt/DATA/GitBuh/CC-Tweaked/build/illuaminate/module"))
+        {
+            var modules = new HtmlModulesParser(filePath).ParseModules();
+            var fileName = Path.GetFileNameWithoutExtension(filePath);
+
+            using var writer = new LuaDocWriter(Path.Combine("cc_libs_lua", fileName + ".lua"));
             writer.Write(modules);
         }
     }

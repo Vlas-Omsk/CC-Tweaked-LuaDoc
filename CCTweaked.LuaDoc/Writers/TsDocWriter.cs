@@ -5,7 +5,17 @@ namespace CCTweaked.LuaDoc.Writers;
 
 public sealed class TsDocWriter : IDocWriter, IDisposable
 {
-    private static readonly string[] _reservedWords = { "delete", "default", "new" };
+    private static readonly string[] _reservedWords =
+    {
+        "delete",
+        "default",
+        "new"
+    };
+    private static readonly string[] _luaLibs = new string[]
+    {
+        "_G",
+        "io"
+    };
     private readonly TextWriter _writer;
     private int _indent;
     private bool _comment;
@@ -41,7 +51,12 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
 
         ExitComment();
 
-        WriteLine($"declare namespace {enumerator.Current.Name} {{");
+        var namespaceName = enumerator.Current.Name;
+
+        if (_luaLibs.Contains(namespaceName))
+            namespaceName = "CC_" + namespaceName;
+
+        WriteLine($"declare namespace {namespaceName} {{");
 
         IncreaseIndent();
 
@@ -276,7 +291,7 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
             type = $"{(type["function".Length..(endBracketIndex + 1)])} => {ConvertToTsType(type[(returnTypeDelimiterIndex + 1)..])}";
         }
 
-        type = Regex.Replace(type, @"function\s", "() => any");
+        type = Regex.Replace(type, @"{\s*([a-zA-Z_]+?)\s*}", x => $"({ConvertToTsType(x.Groups[1].Value)})[]");
         type = Regex.Replace(type, @"{\s*\[(.+?)\]\s*=\s*(.+?)\s*}", x => $"{{ [key: {ConvertToTsType(x.Groups[1].Value)}]: {ConvertToTsType(x.Groups[2].Value)} }}");
         type = Regex.Replace(type, @"([\[a-zA-Z\]?]+)\s*=", x => $"{ConvertToTsType(x.Groups[1].Value)}:");
         type = Regex.Replace(type, @"{\s*(.+)\.\.\.\s*}", x => $"{ConvertToTsType(x.Groups[1].Value)}[]");

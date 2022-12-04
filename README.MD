@@ -1,3 +1,7 @@
+# CC-Tweaked-LuaDoc
+
+Type generator for CC-Tweaked.
+
 ## Using
 
 ### Lua
@@ -40,7 +44,7 @@ For using with TypeScript install [TypeScriptToLua](https://typescripttolua.gith
 
 For more information see [TypeScript Dosc](https://www.typescriptlang.org/tsconfig#types)
 
-## Generating Libraries
+## Generating Types
 
 1. Download [CC-Tweaked-LuaDoc](https://github.com/Vlas-Omsk/CC-Tweaked-LuaDoc)
 

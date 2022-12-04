@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "OpenseaBot": {
+      "commandName": "Project",
+      "commandLineArgs": "/mnt/DATA/GitBuh/CC-Tweaked/build/illuaminate/module"
+    }
+  }
+}

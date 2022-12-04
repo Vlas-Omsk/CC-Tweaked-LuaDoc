@@ -5,14 +5,12 @@ namespace CCTweaked.LuaDoc;
 
 public static class Program
 {
-    // /mnt/DATA/GitBuh/CC-Tweaked/build/illuaminate/module
-
     private static void Main(string[] args)
     {
-        var htmlDocsDirectory = args[0];
-
-        if (!Directory.Exists(htmlDocsDirectory))
+        if (args.Length == 0 || !Directory.Exists(args[0]))
             throw new DirectoryNotFoundException();
+
+        var htmlDocsDirectory = args[0];
 
         GenerateTsDocs(htmlDocsDirectory);
 

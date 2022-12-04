@@ -5,22 +5,27 @@ namespace CCTweaked.LuaDoc;
 
 public static class Program
 {
-    private const string _htmlDocsDirectory = "/mnt/DATA/GitBuh/CC-Tweaked/build/illuaminate/module";
+    // /mnt/DATA/GitBuh/CC-Tweaked/build/illuaminate/module
 
     private static void Main(string[] args)
     {
-        GenerateTsDocs();
+        var htmlDocsDirectory = args[0];
 
-        GenerateLuaDocs();
+        if (!Directory.Exists(htmlDocsDirectory))
+            throw new DirectoryNotFoundException();
+
+        GenerateTsDocs(htmlDocsDirectory);
+
+        GenerateLuaDocs(htmlDocsDirectory);
     }
 
-    private static void GenerateTsDocs()
+    private static void GenerateTsDocs(string htmlDocsDirectory)
     {
         Directory.CreateDirectory("cc_libs_ts");
 
         using var indexWriter = new StreamWriter(Path.Combine("cc_libs_ts", "index.d.ts"));
 
-        foreach (var filePath in GetFiles(_htmlDocsDirectory))
+        foreach (var filePath in GetFiles(htmlDocsDirectory))
         {
             var modules = new HtmlModulesParser(filePath).ParseModules();
             var fileName = Path.GetFileNameWithoutExtension(filePath);
@@ -28,7 +33,7 @@ public static class Program
             using var writer = new TsDocWriter(Path.Combine("cc_libs_ts", fileName + ".d.ts"));
             writer.Write(modules);
 
-            var relativeDirectory = Path.GetRelativePath(_htmlDocsDirectory, Path.GetDirectoryName(filePath));
+            var relativeDirectory = Path.GetRelativePath(htmlDocsDirectory, Path.GetDirectoryName(filePath));
 
             if (relativeDirectory[0] != '.')
                 relativeDirectory = $"./{relativeDirectory}";
@@ -37,11 +42,11 @@ public static class Program
         }
     }
 
-    private static void GenerateLuaDocs()
+    private static void GenerateLuaDocs(string htmlDocsDirectory)
     {
         Directory.CreateDirectory("cc_libs_lua");
 
-        foreach (var filePath in GetFiles(_htmlDocsDirectory))
+        foreach (var filePath in GetFiles(htmlDocsDirectory))
         {
             var modules = new HtmlModulesParser(filePath).ParseModules();
             var fileName = Path.GetFileNameWithoutExtension(filePath);

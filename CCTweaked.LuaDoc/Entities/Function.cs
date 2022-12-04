@@ -7,7 +7,7 @@ public sealed class Function : Entity, IDefinition
     public OverloadCollection<Return>[] ReturnsOverloads { get; set; }
     public bool NeedSelf { get; set; }
 
-    public IEnumerable<Overload> CombineAllOverloads()
+    public IEnumerable<Overload<Return>> CombineAllOverloads()
     {
         if (ParametersOverloads.Length > 0)
         {
@@ -17,12 +17,12 @@ public sealed class Function : Entity, IDefinition
                 {
                     foreach (var returns in ReturnsOverloads)
                     {
-                        yield return new Overload(parameters.Items, returns.Items);
+                        yield return new Overload<Return>(parameters.Items, returns.Items);
                     }
                 }
                 else
                 {
-                    yield return new Overload(parameters.Items, Array.Empty<Return>());
+                    yield return new Overload<Return>(parameters.Items, Array.Empty<Return>());
                 }
             }
         }
@@ -30,12 +30,12 @@ public sealed class Function : Entity, IDefinition
         {
             foreach (var returns in ReturnsOverloads)
             {
-                yield return new Overload(Array.Empty<Parameter>(), returns.Items);
+                yield return new Overload<Return>(Array.Empty<Parameter>(), returns.Items);
             }
         }
         else
         {
-            yield return new Overload(Array.Empty<Parameter>(), Array.Empty<Return>());
+            yield return new Overload<Return>(Array.Empty<Parameter>(), Array.Empty<Return>());
         }
     }
 

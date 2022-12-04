@@ -2,14 +2,14 @@ using CCTweaked.LuaDoc.Entities;
 
 namespace CCTweaked.LuaDoc;
 
-public sealed class Overload
+public sealed class Overload<T>
 {
-    public Overload(Parameter[] parameters, Return[] returns)
+    public Overload(Parameter[] parameters, T[] returns)
     {
         Parameters = parameters;
         Returns = returns;
     }
 
     public Parameter[] Parameters { get; }
-    public Return[] Returns { get; }
+    public T[] Returns { get; }
 }

@@ -23,7 +23,7 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
     private bool _comment;
     private bool _isCursorOnNewLine = true;
 
-    private enum WriteDefinitionsScope
+    private enum Scope
     {
         Global,
         Local,
@@ -58,10 +58,10 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
         ExitComment();
 
         var scope = enumerator.Current.Name == _globalObjectName ?
-            WriteDefinitionsScope.Global :
-            WriteDefinitionsScope.Local;
+            Scope.Global :
+            Scope.Local;
 
-        if (scope == WriteDefinitionsScope.Local)
+        if (scope == Scope.Local)
         {
             WriteLine($"declare namespace {enumerator.Current.Name} {{");
 
@@ -87,7 +87,7 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
 
             ExitComment();
 
-            if (scope == WriteDefinitionsScope.Local)
+            if (scope == Scope.Local)
                 Write("export ");
             else
                 Write("declare ");
@@ -96,7 +96,7 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
 
             IncreaseIndent();
 
-            WriteDefinitions(enumerator.Current.Name, enumerator.Current.Definitions, WriteDefinitionsScope.Member);
+            WriteDefinitions(enumerator.Current.Name, enumerator.Current.Definitions, Scope.Member);
 
             DecreaseIndent();
 
@@ -104,7 +104,7 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
             WriteLine(null);
         }
 
-        if (scope == WriteDefinitionsScope.Local)
+        if (scope == Scope.Local)
         {
             DecreaseIndent();
 
@@ -113,7 +113,7 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
         }
     }
 
-    private void WriteDefinitions(string moduleName, IDefinition[] definitions, WriteDefinitionsScope scope)
+    private void WriteDefinitions(string moduleName, IDefinition[] definitions, Scope scope)
     {
         foreach (var definition in definitions)
         {
@@ -135,81 +135,15 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
         }
     }
 
-    private void WriteFunction(Function function, WriteDefinitionsScope scope)
+    private void WriteFunction(Function function, Scope scope)
     {
-        foreach (var overload in CombineAllOverloads(function))
+        foreach (var overload in FunctionUtils.CombineOverloads(function))
         {
             WriteOverload(function, overload, scope);
         }
     }
 
-    private IEnumerable<Overload> CombineAllOverloads(Function function)
-    {
-        if (function.ParametersOverloads.Length > 0)
-        {
-            var returns = MergeReturns(function);
-
-            foreach (var parameters in function.ParametersOverloads)
-            {
-                if (function.ReturnsOverloads.Length > 0)
-                {
-                    yield return new Overload(parameters.Items, returns);
-                }
-                else
-                {
-                    yield return new Overload(parameters.Items, Array.Empty<Return>());
-                }
-            }
-        }
-        else if (function.ReturnsOverloads.Length > 0)
-        {
-            yield return new Overload(Array.Empty<Parameter>(), MergeReturns(function));
-        }
-        else
-        {
-            yield return new Overload(Array.Empty<Parameter>(), Array.Empty<Return>());
-        }
-    }
-
-    private Return[] MergeReturns(Function function)
-    {
-        if (function.ReturnsOverloads.Length == 0)
-            return Array.Empty<Return>();
-
-        var result = new List<Return>();
-
-        foreach (var returns in function.ReturnsOverloads)
-        {
-            for (var i = 0; i < returns.Items.Length; i++)
-            {
-                var currentReturn = returns.Items[i];
-                var currentReturnType = ConvertToTsType(currentReturn.Type);
-
-                if (result.Count > i)
-                {
-                    var @return = result[i];
-
-                    result[i] = new Return()
-                    {
-                        Type = $"({@return.Type}) | ({currentReturnType})",
-                        Description = $"{@return.Description} **or** {currentReturn.Description}"
-                    };
-                }
-                else
-                {
-                    result.Add(new Return()
-                    {
-                        Type = currentReturnType,
-                        Description = currentReturn.Description
-                    });
-                }
-            }
-        }
-
-        return result.ToArray();
-    }
-
-    private void WriteOverload(Function function, Overload overload, WriteDefinitionsScope scope)
+    private void WriteOverload(Function function, Overload<Return[]> overload, Scope scope)
     {
         EnterComment();
 
@@ -237,9 +171,27 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
             WriteLine(null);
         }
 
-        foreach (var @return in overload.Returns)
+        if (overload.Returns.Length > 0)
         {
-            WriteLine($"@return {@return.Description}");
+            for (var i = 0; i < overload.Returns[0].Length; i++)
+            {
+                Write($"@return ");
+
+                for (var j = 0; j < overload.Returns.Length; j++)
+                {
+                    var description = overload.Returns[j][i].Description;
+
+                    if (string.IsNullOrWhiteSpace(description))
+                        description = "`null`";
+
+                    Write($"{description} ");
+
+                    if (j != overload.Returns.Length - 1)
+                        Write("**or** ");
+                }
+
+                WriteLine(null);
+            }
         }
 
         if (!function.NeedSelf)
@@ -252,7 +204,7 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
 
         switch (scope)
         {
-            case WriteDefinitionsScope.Local:
+            case Scope.Local:
                 if (_reservedWords.Contains(functionName))
                 {
                     functionName = "_" + functionName;
@@ -265,13 +217,13 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
 
                 Write("function ");
                 break;
-            case WriteDefinitionsScope.Global:
+            case Scope.Global:
                 if (_reservedWords.Contains(functionName))
                     throw new Exception();
 
                 Write("declare function ");
                 break;
-            case WriteDefinitionsScope.Member:
+            case Scope.Member:
                 break;
             default:
                 throw new InvalidDataException();
@@ -294,15 +246,10 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
                 result = $"_{result}";
             }
 
-            // var hasDefaultValue = !string.IsNullOrWhiteSpace(x.DefaultValue);
-
             if (x.Optional)
                 result += "?";
 
             result += ": " + type;
-
-            // if (hasDefaultValue)
-            //     result += " = " + x.DefaultValue;
 
             return result;
         }));
@@ -315,27 +262,34 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
         }
         else if (overload.Returns.Length == 1)
         {
-            Write($"{overload.Returns[0].Type}");
+            var returns = overload.Returns[0];
+
+            if (returns.Length == 1)
+                Write(ConvertToTsType(returns[0].Type));
+            else
+                Write($"LuaMultiReturn<[{GetReturnsType(overload.Returns[0])}]>");
         }
         else
         {
-            var returns = string.Join(", ", overload.Returns.Select(x =>
-            {
-                return x.Type;
-            }));
+            var returns = "LuaMultiReturn<[" + string.Join("]> | LuaMultiReturn<[", overload.Returns.Select(x => GetReturnsType(x))) + "]>";
 
-            Write($"LuaMultiReturn<[{returns}]>");
+            Write(returns);
         }
 
         WriteLine(";");
 
-        if (scope == WriteDefinitionsScope.Local && isOriginalReservedName)
+        if (scope == Scope.Local && isOriginalReservedName)
             WriteLine($"export {{ {functionName} as {function.Name} }};");
 
         WriteLine(null);
     }
 
-    private void WriteVariable(Variable variable, WriteDefinitionsScope scope)
+    private string GetReturnsType(Return[] returns)
+    {
+        return string.Join(", ", returns.Select(x => ConvertToTsType(x.Type)));
+    }
+
+    private void WriteVariable(Variable variable, Scope scope)
     {
         EnterComment();
 
@@ -347,13 +301,13 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
 
         switch (scope)
         {
-            case WriteDefinitionsScope.Global:
+            case Scope.Global:
                 Write("declare ");
                 break;
-            case WriteDefinitionsScope.Local:
+            case Scope.Local:
                 Write("export ");
                 break;
-            case WriteDefinitionsScope.Member:
+            case Scope.Member:
                 break;
             default:
                 throw new InvalidDataException();
@@ -367,81 +321,6 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
             WriteLine(": any");
 
         WriteLine(null);
-    }
-
-    private static string ConvertToTsType(string type)
-    {
-        var original = type;
-
-        if (string.IsNullOrWhiteSpace(type))
-            type = "any";
-
-        type = type.Replace("nil", "null");
-        type = type.Replace("table", "LuaTable");
-
-        int index = 0;
-
-        while (index < type.Length && (index = type.IndexOf("function", index)) != -1)
-        {
-            var endBracketIndex = FindEndBracket(type, index + "function".Length);
-
-            if (endBracketIndex == -1)
-            {
-                type = type[..index] + "() => any" + type[(index + "function".Length)..];
-            }
-
-            index += "function".Length;
-        }
-
-        if (type.StartsWith("function"))
-        {
-            var endBracketIndex = FindEndBracket(type, "function".Length);
-            var returnTypeDelimiterIndex = type.IndexOf(':', endBracketIndex);
-
-            type = $"{(type["function".Length..(endBracketIndex + 1)])} => {ConvertToTsType(type[(returnTypeDelimiterIndex + 1)..])}";
-        }
-
-        type = Regex.Replace(type, @"{\s*([a-zA-Z_]+?)\s*}", x => $"({ConvertToTsType(x.Groups[1].Value)})[]");
-        type = Regex.Replace(type, @"{\s*\[(.+?)\]\s*=\s*(.+?)\s*}", x => $"{{ [key: {ConvertToTsType(x.Groups[1].Value)}]: {ConvertToTsType(x.Groups[2].Value)} }}");
-        type = Regex.Replace(type, @"([\[a-zA-Z\]?]+)\s*=", x => $"{ConvertToTsType(x.Groups[1].Value)}:");
-        type = Regex.Replace(type, @"{\s*(.+)\.\.\.\s*}", x => $"{ConvertToTsType(x.Groups[1].Value)}[]");
-        type = Regex.Replace(type, @"([a-zA-Z_]+?)\.\.\.", x => $"({ConvertToTsType(x.Groups[1].Value)})[]");
-
-        return type;
-    }
-
-    private static int FindEndBracket(string str, int startIndex)
-    {
-        for (; startIndex < str.Length; startIndex++)
-        {
-            var ch = str[startIndex];
-
-            if (ch == '(')
-                break;
-            else if (!char.IsWhiteSpace(ch))
-                return -1;
-        }
-
-        var depth = 0;
-
-        for (; startIndex < str.Length; startIndex++)
-        {
-            var ch = str[startIndex];
-
-            if (ch == '(')
-            {
-                depth++;
-            }
-            else if (ch == ')')
-            {
-                depth--;
-
-                if (depth == 0)
-                    return startIndex;
-            }
-        }
-
-        return -1;
     }
 
     private void WriteDescription(string description)
@@ -567,6 +446,81 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
             return true;
 
         return false;
+    }
+
+    private static string ConvertToTsType(string type)
+    {
+        var original = type;
+
+        if (string.IsNullOrWhiteSpace(type))
+            type = "any";
+
+        type = type.Replace("nil", "null");
+        type = type.Replace("table", "LuaTable");
+
+        int index = 0;
+
+        while (index < type.Length && (index = type.IndexOf("function", index)) != -1)
+        {
+            var endBracketIndex = FindEndBracket(type, index + "function".Length);
+
+            if (endBracketIndex == -1)
+            {
+                type = type[..index] + "() => any" + type[(index + "function".Length)..];
+            }
+
+            index += "function".Length;
+        }
+
+        if (type.StartsWith("function"))
+        {
+            var endBracketIndex = FindEndBracket(type, "function".Length);
+            var returnTypeDelimiterIndex = type.IndexOf(':', endBracketIndex);
+
+            type = $"{(type["function".Length..(endBracketIndex + 1)])} => {ConvertToTsType(type[(returnTypeDelimiterIndex + 1)..])}";
+        }
+
+        type = Regex.Replace(type, @"{\s*([a-zA-Z_]+?)\s*}", x => $"({ConvertToTsType(x.Groups[1].Value)})[]");
+        type = Regex.Replace(type, @"{\s*\[(.+?)\]\s*=\s*(.+?)\s*}", x => $"{{ [key: {ConvertToTsType(x.Groups[1].Value)}]: {ConvertToTsType(x.Groups[2].Value)} }}");
+        type = Regex.Replace(type, @"([\[a-zA-Z\]?]+)\s*=", x => $"{ConvertToTsType(x.Groups[1].Value)}:");
+        type = Regex.Replace(type, @"{\s*(.+)\.\.\.\s*}", x => $"{ConvertToTsType(x.Groups[1].Value)}[]");
+        type = Regex.Replace(type, @"([a-zA-Z_]+?)\.\.\.", x => $"({ConvertToTsType(x.Groups[1].Value)})[]");
+
+        return type;
+    }
+
+    private static int FindEndBracket(string str, int startIndex)
+    {
+        for (; startIndex < str.Length; startIndex++)
+        {
+            var ch = str[startIndex];
+
+            if (ch == '(')
+                break;
+            else if (!char.IsWhiteSpace(ch))
+                return -1;
+        }
+
+        var depth = 0;
+
+        for (; startIndex < str.Length; startIndex++)
+        {
+            var ch = str[startIndex];
+
+            if (ch == '(')
+            {
+                depth++;
+            }
+            else if (ch == ')')
+            {
+                depth--;
+
+                if (depth == 0)
+                    return startIndex;
+            }
+        }
+
+        return -1;
     }
 
     public void Dispose()

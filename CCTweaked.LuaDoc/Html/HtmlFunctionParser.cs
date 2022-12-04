@@ -26,8 +26,8 @@ internal sealed class HtmlFunctionParser
 
         if (_enumerator.Current != null)
         {
-            var parametersOverloads = new List<OverloadCollection<Parameter>>();
-            var returnsOverloads = new List<OverloadCollection<Return>>();
+            var parametersOverloads = new List<ItemsOverload<Parameter>>();
+            var returnsOverloads = new List<ItemsOverload<Return>>();
 
             foreach (var section in new HtmlSectionsParser(_enumerator).ParseSections())
             {
@@ -38,7 +38,7 @@ internal sealed class HtmlFunctionParser
                             var items = ((IEnumerable<Parameter>)section.Data).ToArray();
 
                             if (items.Length > 0)
-                                parametersOverloads.Add(new OverloadCollection<Parameter>()
+                                parametersOverloads.Add(new ItemsOverload<Parameter>()
                                 {
                                     Items = items
                                 });
@@ -49,7 +49,7 @@ internal sealed class HtmlFunctionParser
                             var items = ((IEnumerable<Return>)section.Data).ToArray();
 
                             if (items.Length > 0)
-                                returnsOverloads.Add(new OverloadCollection<Return>()
+                                returnsOverloads.Add(new ItemsOverload<Return>()
                                 {
                                     Items = items
                                 });
@@ -66,8 +66,8 @@ internal sealed class HtmlFunctionParser
         }
         else
         {
-            function.ParametersOverloads = Array.Empty<OverloadCollection<Parameter>>();
-            function.ReturnsOverloads = Array.Empty<OverloadCollection<Return>>();
+            function.ParametersOverloads = Array.Empty<ItemsOverload<Parameter>>();
+            function.ReturnsOverloads = Array.Empty<ItemsOverload<Return>>();
         }
 
         return function;

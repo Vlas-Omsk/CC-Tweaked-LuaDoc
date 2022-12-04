@@ -4,7 +4,7 @@ namespace CCTweaked.LuaDoc;
 
 public static class FunctionUtils
 {
-    public static IEnumerable<Overload<Return[]>> CombineOverloads(Function function)
+    public static IEnumerable<MergedOverload> CombineMergedOverloads(Function function)
     {
         if (function.ParametersOverloads.Length > 0)
         {
@@ -14,25 +14,25 @@ public static class FunctionUtils
             {
                 if (function.ReturnsOverloads.Length > 0)
                 {
-                    yield return new Overload<Return[]>(parameters.Items, returns);
+                    yield return new MergedOverload(parameters.Items, returns);
                 }
                 else
                 {
-                    yield return new Overload<Return[]>(parameters.Items, Array.Empty<Return[]>());
+                    yield return new MergedOverload(parameters.Items, Array.Empty<Return[]>());
                 }
             }
         }
         else if (function.ReturnsOverloads.Length > 0)
         {
-            yield return new Overload<Return[]>(Array.Empty<Parameter>(), AlignReturns(function.ReturnsOverloads).ToArray());
+            yield return new MergedOverload(Array.Empty<Parameter>(), AlignReturns(function.ReturnsOverloads).ToArray());
         }
         else
         {
-            yield return new Overload<Return[]>(Array.Empty<Parameter>(), Array.Empty<Return[]>());
+            yield return new MergedOverload(Array.Empty<Parameter>(), Array.Empty<Return[]>());
         }
     }
 
-    private static IEnumerable<Return[]> AlignReturns(OverloadCollection<Return>[] returnsOverloads)
+    private static IEnumerable<Return[]> AlignReturns(ItemsOverload<Return>[] returnsOverloads)
     {
         if (returnsOverloads.Length == 0)
             yield break;

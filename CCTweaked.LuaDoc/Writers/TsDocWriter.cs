@@ -137,13 +137,13 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
 
     private void WriteFunction(Function function, Scope scope)
     {
-        foreach (var overload in FunctionUtils.CombineOverloads(function))
+        foreach (var overload in FunctionUtils.CombineMergedOverloads(function))
         {
             WriteOverload(function, overload, scope);
         }
     }
 
-    private void WriteOverload(Function function, Overload<Return[]> overload, Scope scope)
+    private void WriteOverload(Function function, MergedOverload overload, Scope scope)
     {
         EnterComment();
 

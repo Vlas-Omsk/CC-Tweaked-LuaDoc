@@ -137,13 +137,13 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
 
     private void WriteFunction(Function function, Scope scope)
     {
-        foreach (var overload in FunctionUtils.CombineMergedOverloads(function))
+        foreach (var overload in function.CombineOverloadsWithMergedReturns())
         {
             WriteOverload(function, overload, scope);
         }
     }
 
-    private void WriteOverload(Function function, MergedOverload overload, Scope scope)
+    private void WriteOverload(Function function, OverloadWithMergedReturns overload, Scope scope)
     {
         EnterComment();
 
@@ -448,6 +448,11 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
         return false;
     }
 
+    public void Dispose()
+    {
+        _writer.Dispose();
+    }
+
     private static string ConvertToTsType(string type)
     {
         var original = type;
@@ -521,10 +526,5 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
         }
 
         return -1;
-    }
-
-    public void Dispose()
-    {
-        _writer.Dispose();
     }
 }

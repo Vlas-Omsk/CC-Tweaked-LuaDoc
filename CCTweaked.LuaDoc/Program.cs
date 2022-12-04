@@ -9,12 +9,12 @@ public static class Program
 
     private static void Main(string[] args)
     {
-        GenerateLuaDocs();
-
         GenerateTsDocs();
+
+        GenerateLuaDocs();
     }
 
-    private static void GenerateLuaDocs()
+    private static void GenerateTsDocs()
     {
         Directory.CreateDirectory("cc_libs_ts");
 
@@ -37,7 +37,7 @@ public static class Program
         }
     }
 
-    private static void GenerateTsDocs()
+    private static void GenerateLuaDocs()
     {
         Directory.CreateDirectory("cc_libs_lua");
 

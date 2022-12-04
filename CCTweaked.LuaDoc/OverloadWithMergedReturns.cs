@@ -2,9 +2,9 @@ using CCTweaked.LuaDoc.Entities;
 
 namespace CCTweaked.LuaDoc;
 
-public sealed class MergedOverload
+public sealed class OverloadWithMergedReturns
 {
-    public MergedOverload(Parameter[] parameters, Return[][] returns)
+    public OverloadWithMergedReturns(Parameter[] parameters, Return[][] returns)
     {
         Parameters = parameters;
         Returns = returns;

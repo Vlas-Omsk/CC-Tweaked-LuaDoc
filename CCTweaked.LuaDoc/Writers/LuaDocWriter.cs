@@ -5,9 +5,9 @@ namespace CCTweaked.LuaDoc.Writers;
 
 public sealed class LuaDocWriter : IDocWriter, IDisposable
 {
-    private const int _threashold = 80;
-    private const string _commentPrefix = "---";
     private readonly TextWriter _writer;
+    private bool _comment;
+    private bool _isCursorOnNewLine = true;
 
     public LuaDocWriter(string path) : this(new StreamWriter(path))
     {
@@ -40,16 +40,26 @@ public sealed class LuaDocWriter : IDocWriter, IDisposable
         if (module.IsType)
             throw new Exception();
 
-        WriteCommentLine("@meta");
-        _writer.WriteLine();
+        EnterComment();
+
+        WriteLine("@meta");
+
+        ExitComment();
+
+        WriteLine(null);
+
+        EnterComment();
 
         WriteDescription(module.Description);
         WriteSource(module.Source);
         WriteSeeCollection(module.See);
 
-        WriteCommentLine($"@class {module.Name}lib");
-        _writer.WriteLine($"{module.Name} = {{}}");
-        _writer.WriteLine();
+        WriteLine($"@class {module.Name}lib");
+
+        ExitComment();
+
+        WriteLine($"{module.Name} = {{}}");
+        WriteLine(null);
 
         WriteDefinitions(module);
     }
@@ -59,15 +69,21 @@ public sealed class LuaDocWriter : IDocWriter, IDisposable
         if (!module.IsType)
             throw new Exception();
 
+        EnterComment();
+
         WriteDescription(module.Description);
         WriteSource(module.Source);
         WriteSeeCollection(module.See);
 
-        WriteCommentLine($"@class {module.Name}");
-        _writer.WriteLine($"local {module.Name} = {{}}");
-        _writer.WriteLine();
-        WriteCommentLine($"@alias {baseModule.Name}.{module.Name} {module.Name}");
-        _writer.WriteLine();
+        WriteLine($"@class {module.Name}");
+
+        ExitComment();
+
+        WriteLine($"local {module.Name} = {{}}");
+        WriteLine(null);
+
+        WriteLine($"@alias {baseModule.Name}.{module.Name} {module.Name}");
+        WriteLine(null);
 
         WriteDefinitions(module);
     }
@@ -91,100 +107,102 @@ public sealed class LuaDocWriter : IDocWriter, IDisposable
         }
     }
 
-    private void WriteVariable(Module module, Variable variable)
-    {
-        WriteDescription(variable.Description);
-        WriteSource(variable.Source);
-        WriteSeeCollection(variable.See);
-
-        _writer.Write($"{module.Name}.{variable.Name}");
-
-        if (!string.IsNullOrWhiteSpace(variable.Value))
-            _writer.Write($" = {variable.Value}");
-        else
-            _writer.Write(" = {}");
-
-        _writer.WriteLine();
-        _writer.WriteLine();
-    }
-
     private void WriteFunction(Module module, Function function)
     {
+        EnterComment();
+
         WriteDescription(function.Description);
         WriteSource(function.Source);
         WriteSeeCollection(function.See);
 
-        using var enumerator = function.CombineAllOverloads().GetEnumerator();
+        using var enumerator = function.CombineOverloads().GetEnumerator();
         enumerator.MoveNext();
 
         var firstOverload = enumerator.Current;
 
         while (enumerator.MoveNext())
         {
-            WriteComment("@overload fun(");
-            _writer.Write(string.Join(", ", enumerator.Current.Parameters.Select(x =>
+            Write("@overload fun(");
+            Write(string.Join(", ", enumerator.Current.Parameters.Select(x =>
             {
-                var (name, type) = GetParameterPresentation(x);
+                var name = GetParameterLuaFullName(x);
+                var type = ConvertToLuaType(x.Type);
 
                 return $"{name} : {type}";
             })));
-            _writer.Write(")");
+            Write(")");
 
             if (enumerator.Current.Returns.Length > 0)
             {
-                _writer.Write(" : ");
-                _writer.Write(string.Join(", ", enumerator.Current.Returns.Select(x => ConvertToLuaType(x.Type))));
+                Write(" : ");
+                Write(string.Join(", ", enumerator.Current.Returns.Select(x => ConvertToLuaType(x.Type))));
             }
 
-            _writer.WriteLine();
+            WriteLine(null);
         }
 
-        var parameters = function.CollectAllParameters();
-
-        foreach (var param in parameters)
+        foreach (var param in function.MergeParameters())
         {
-            var (name, type) = GetParameterPresentation(param);
+            var name = GetParameterLuaFullName(param);
+            var type = ConvertToLuaType(param.Type);
 
-            WriteComment($"@param {name} {type}");
+            Write($"@param {name} {type}");
 
             if (!string.IsNullOrWhiteSpace(param.DefaultValue))
-                _writer.Write($" Default: `{param.DefaultValue}`.");
+                Write($" Default: `{param.DefaultValue}`.");
 
             if (!string.IsNullOrWhiteSpace(param.Description))
-                _writer.Write(" " + param.Description.ReplaceLineEndings(" "));
+                Write(" " + param.Description.ReplaceLineEndings(" "));
 
-            _writer.WriteLine();
+            WriteLine(null);
         }
 
-        if (firstOverload.Returns.Length > 0)
+        foreach (var @return in firstOverload.Returns)
         {
-            foreach (var @return in firstOverload.Returns)
-            {
-                var type = ConvertToLuaType(@return.Type);
+            var type = ConvertToLuaType(@return.Type);
 
-                WriteCommentLine($"@return {(type)} . {@return.Description.ReplaceLineEndings(" ")}");
-            }
+            WriteLine($"@return {(type)} . {@return.Description.ReplaceLineEndings(" ")}");
         }
 
-        _writer.Write($"function {module.Name}{(function.NeedSelf ? ':' : '.')}{function.Name}(");
+        ExitComment();
+
+        Write($"function {module.Name}{(function.NeedSelf ? ':' : '.')}{function.Name}(");
 
         if (firstOverload.Parameters.Length > 0)
-            _writer.Write(string.Join(", ", firstOverload.Parameters.Select(x => x.Name)));
+            Write(string.Join(", ", firstOverload.Parameters.Select(x => x.Name)));
 
-        _writer.WriteLine(") end");
-        _writer.WriteLine();
+        WriteLine(") end");
+        WriteLine(null);
     }
 
-    private (string name, string type) GetParameterPresentation(Parameter parameter)
+    private void WriteVariable(Module module, Variable variable)
     {
-        var name = parameter.Name;
+        EnterComment();
 
-        if (parameter.Optional)
-            name += '?';
+        WriteDescription(variable.Description);
+        WriteSource(variable.Source);
+        WriteSeeCollection(variable.See);
 
-        var type = ConvertToLuaType(parameter.Type);
+        ExitComment();
 
-        return (name, type);
+        Write($"{module.Name}.{variable.Name}");
+
+        if (!string.IsNullOrWhiteSpace(variable.Value))
+            Write($" = {variable.Value}");
+        else
+            Write(" = {}");
+
+        WriteLine(null);
+        WriteLine(null);
+    }
+
+    private void WriteDescription(string description)
+    {
+        if (!string.IsNullOrWhiteSpace(description))
+        {
+            WriteLine(description);
+            WriteLine(null);
+        }
     }
 
     private void WriteSeeCollection(See[] seeCollection)
@@ -192,24 +210,21 @@ public sealed class LuaDocWriter : IDocWriter, IDisposable
         if (seeCollection != null)
         {
             foreach (var see in seeCollection)
-                WriteCommentLine($"@see {see}");
-
-            foreach (var see in seeCollection)
             {
-                WriteComment($"@see");
+                Write($"@see");
 
                 if (!string.IsNullOrWhiteSpace(see.Link))
-                    WriteComment($" {see.Link}");
+                    Write($" {see.Link}");
                 else
-                    WriteComment(" .");
+                    Write(" .");
 
                 if (!string.IsNullOrWhiteSpace(see.Description))
-                    WriteComment(see.Description);
+                    Write($" {see.Description}");
 
-                WriteCommentLine(null);
+                WriteLine(null);
             }
 
-            WriteCommentLine(null);
+            WriteLine(null);
         }
     }
 
@@ -217,60 +232,75 @@ public sealed class LuaDocWriter : IDocWriter, IDisposable
     {
         if (!string.IsNullOrWhiteSpace(source))
         {
-            WriteCommentLine($"[View source]({source})");
-            WriteCommentLine(null);
+            WriteLine($"[View source]({source})");
+            WriteLine(null);
         }
     }
 
-    private void WriteDescription(string description)
+    private void WriteLine(string str)
     {
-        if (!string.IsNullOrWhiteSpace(description))
-        {
-            WriteCommentText(description);
-            WriteCommentLine(null);
-        }
-    }
-
-    private void WriteCommentText(string text)
-    {
-        var lines = text.Split(Environment.NewLine);
-
-        foreach (var currentLine in lines)
-        {
-            var words = currentLine.Split(' ');
-            string line = null;
-
-            foreach (var word in words)
-            {
-                if ((line?.Length ?? 0) + word.Length + 1 > _threashold)
-                {
-                    WriteCommentLine(line);
-                    line = word;
-                }
-                else
-                {
-                    if (line == null)
-                        line = word;
-                    else
-                        line += ' ' + word;
-                }
-            }
-
-            WriteCommentLine(line);
-        }
-    }
-
-    private void WriteCommentLine(string line)
-    {
-        WriteComment(line);
+        Write(str);
         _writer.WriteLine();
+        _isCursorOnNewLine = true;
     }
 
-    private void WriteComment(string line)
+    private void Write(string str)
     {
-        _writer.Write(_commentPrefix);
-        if (line != null)
-            _writer.Write(line.ReplaceLineEndings(" "));
+        if (str == null)
+        {
+            WriteInternal(str);
+            return;
+        }
+
+        var lines = str.Split(Environment.NewLine);
+
+        for (var i = 0; i < lines.Length - 1; i++)
+        {
+            WriteInternal(lines[i]);
+            _writer.WriteLine();
+            _isCursorOnNewLine = true;
+        }
+
+        WriteInternal(lines[lines.Length - 1]);
+    }
+
+    private void WriteInternal(string str)
+    {
+        if (_isCursorOnNewLine)
+        {
+            if (_comment)
+                _writer.Write("---");
+
+            _isCursorOnNewLine = false;
+        }
+
+        if (str != null)
+            _writer.Write(str);
+    }
+
+    private void EnterComment()
+    {
+        _comment = true;
+    }
+
+    private void ExitComment()
+    {
+        _comment = false;
+    }
+
+    public void Dispose()
+    {
+        _writer.Dispose();
+    }
+
+    private static string GetParameterLuaFullName(Parameter parameter)
+    {
+        var name = parameter.Name;
+
+        if (parameter.Optional)
+            name += '?';
+
+        return name;
     }
 
     private static string ConvertToLuaType(string type)
@@ -283,10 +313,5 @@ public sealed class LuaDocWriter : IDocWriter, IDisposable
         type = Regex.Replace(type, @"{\s*(.+)\.\.\.\s*}", x => $"{{ [number]: {x.Groups[1].Value} }}");
 
         return type;
-    }
-
-    public void Dispose()
-    {
-        _writer.Dispose();
     }
 }

@@ -6,67 +6,6 @@ public sealed class Function : Entity, IDefinition
     public ItemsOverload<Parameter>[] ParametersOverloads { get; set; }
     public ItemsOverload<Return>[] ReturnsOverloads { get; set; }
     public bool NeedSelf { get; set; }
-
-    public IEnumerable<Overload> CombineAllOverloads()
-    {
-        if (ParametersOverloads.Length > 0)
-        {
-            foreach (var parameters in ParametersOverloads)
-            {
-                if (ReturnsOverloads.Length > 0)
-                {
-                    foreach (var returns in ReturnsOverloads)
-                    {
-                        yield return new Overload(parameters.Items, returns.Items);
-                    }
-                }
-                else
-                {
-                    yield return new Overload(parameters.Items, Array.Empty<Return>());
-                }
-            }
-        }
-        else if (ReturnsOverloads.Length > 0)
-        {
-            foreach (var returns in ReturnsOverloads)
-            {
-                yield return new Overload(Array.Empty<Parameter>(), returns.Items);
-            }
-        }
-        else
-        {
-            yield return new Overload(Array.Empty<Parameter>(), Array.Empty<Return>());
-        }
-    }
-
-    public IEnumerable<Parameter> CollectAllParameters()
-    {
-        var result = new List<Parameter>();
-
-        foreach (var parametersOverload in ParametersOverloads)
-        {
-            foreach (var parameter in parametersOverload.Items)
-            {
-                var find = result.FirstOrDefault(x => x.Name == parameter.Name);
-
-                if (find != null)
-                {
-                    if (
-                        find.Description != parameter.Description ||
-                        find.Optional != parameter.Optional ||
-                        find.Type != parameter.Type
-                    )
-                        throw new Exception("Ambiguous match");
-
-                    continue;
-                }
-
-                result.Add(parameter);
-            }
-        }
-
-        return result.ToArray();
-    }
 }
 
 public sealed class ItemsOverload<T>

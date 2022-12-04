@@ -82,7 +82,12 @@ public sealed class LuaDocWriter : IDocWriter, IDisposable
         WriteLine($"local {module.Name} = {{}}");
         WriteLine(null);
 
+        EnterComment();
+
         WriteLine($"@alias {baseModule.Name}.{module.Name} {module.Name}");
+
+        ExitComment();
+
         WriteLine(null);
 
         WriteDefinitions(module);
@@ -309,8 +314,10 @@ public sealed class LuaDocWriter : IDocWriter, IDisposable
             type = "any";
 
         type = type.Replace("function(", "fun(");
-        type = Regex.Replace(type, @"([\[a-zA-Z\]?]+)\s*=", x => $"{x.Groups[1].Value}:");
-        type = Regex.Replace(type, @"{\s*(.+)\.\.\.\s*}", x => $"{{ [number]: {x.Groups[1].Value} }}");
+        type = Regex.Replace(type, @"{\s*([a-zA-Z_]+?)\s*}", x => $"({ConvertToLuaType(x.Groups[1].Value)})[]");
+        type = Regex.Replace(type, @"([\[a-zA-Z\]?]+)\s*=", x => $"{ConvertToLuaType(x.Groups[1].Value)}:");
+        type = Regex.Replace(type, @"{\s*(.+)\.\.\.\s*}", x => $"{{ [number]: {ConvertToLuaType(x.Groups[1].Value)} }}");
+        type = Regex.Replace(type, @"([a-zA-Z_]+?)\.\.\.", x => $"({ConvertToLuaType(x.Groups[1].Value)})[]");
 
         return type;
     }

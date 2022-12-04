@@ -166,7 +166,7 @@ public sealed class LuaDocWriter : IDocWriter, IDisposable
             }
         }
 
-        _writer.Write($"function {module.Name}{(function.IsInstance ? ':' : '.')}{function.Name}(");
+        _writer.Write($"function {module.Name}{(function.NeedSelf ? ':' : '.')}{function.Name}(");
 
         if (firstOverload.Parameters.Length > 0)
             _writer.Write(string.Join(", ", firstOverload.Parameters.Select(x => x.Name)));

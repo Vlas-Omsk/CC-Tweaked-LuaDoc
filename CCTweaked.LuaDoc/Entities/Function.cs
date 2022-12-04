@@ -5,7 +5,7 @@ public sealed class Function : Entity, IDefinition
     public string Name { get; set; }
     public OverloadCollection<Parameter>[] ParametersOverloads { get; set; }
     public OverloadCollection<Return>[] ReturnsOverloads { get; set; }
-    public bool IsInstance { get; set; }
+    public bool NeedSelf { get; set; }
 
     public IEnumerable<Overload> CombineAllOverloads()
     {

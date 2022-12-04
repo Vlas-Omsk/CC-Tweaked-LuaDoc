@@ -11,15 +11,24 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
         "default",
         "new"
     };
-    private static readonly string[] _luaLibs = new string[]
+    private static readonly (string, string)[] _ignoreList =
     {
-        "_G",
-        "io"
+        ("io", "stdin"),
+        ("io", "stdout"),
+        ("io", "stderr")
     };
+    private const string _globalObjectName = "_G";
     private readonly TextWriter _writer;
     private int _indent;
     private bool _comment;
     private bool _isCursorOnNewLine = true;
+
+    private enum WriteDefinitionsScope
+    {
+        Global,
+        Local,
+        Member
+    }
 
     public TsDocWriter(string path) : this(new StreamWriter(path))
     {
@@ -40,9 +49,6 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
         if (enumerator.Current.IsType)
             throw new Exception();
 
-        WriteLine("/** @noSelfInFile */");
-        WriteLine(null);
-
         EnterComment();
 
         WriteDescription(enumerator.Current.Description);
@@ -51,16 +57,22 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
 
         ExitComment();
 
-        var namespaceName = enumerator.Current.Name;
+        var scope = enumerator.Current.Name == _globalObjectName ?
+            WriteDefinitionsScope.Global :
+            WriteDefinitionsScope.Local;
 
-        if (_luaLibs.Contains(namespaceName))
-            namespaceName = "CC_" + namespaceName;
+        if (scope == WriteDefinitionsScope.Local)
+        {
+            WriteLine($"declare namespace {enumerator.Current.Name} {{");
 
-        WriteLine($"declare namespace {namespaceName} {{");
+            IncreaseIndent();
+        }
+        else
+        {
+            WriteLine(null);
+        }
 
-        IncreaseIndent();
-
-        WriteDefinitions(enumerator.Current.Definitions, false);
+        WriteDefinitions(enumerator.Current.Name, enumerator.Current.Definitions, scope);
 
         while (enumerator.MoveNext())
         {
@@ -75,11 +87,16 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
 
             ExitComment();
 
-            WriteLine($"export interface {enumerator.Current.Name} {{");
+            if (scope == WriteDefinitionsScope.Local)
+                Write("export ");
+            else
+                Write("declare ");
+
+            WriteLine($"interface {enumerator.Current.Name} {{");
 
             IncreaseIndent();
 
-            WriteDefinitions(enumerator.Current.Definitions, true);
+            WriteDefinitions(enumerator.Current.Name, enumerator.Current.Definitions, WriteDefinitionsScope.Member);
 
             DecreaseIndent();
 
@@ -87,23 +104,29 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
             WriteLine(null);
         }
 
-        DecreaseIndent();
+        if (scope == WriteDefinitionsScope.Local)
+        {
+            DecreaseIndent();
 
-        WriteLine("}");
-        WriteLine(null);
+            WriteLine("}");
+            WriteLine(null);
+        }
     }
 
-    private void WriteDefinitions(IDefinition[] definitions, bool isMembers)
+    private void WriteDefinitions(string moduleName, IDefinition[] definitions, WriteDefinitionsScope scope)
     {
         foreach (var definition in definitions)
         {
+            if (IsIgnoreListContains(moduleName, definition.Name))
+                continue;
+
             if (definition is Function function)
             {
-                WriteFunction(function, isMembers);
+                WriteFunction(function, scope);
             }
             else if (definition is Variable variable)
             {
-                WriteVariable(variable, isMembers);
+                WriteVariable(variable, scope);
             }
             else
             {
@@ -112,34 +135,146 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
         }
     }
 
-    private void WriteFunction(Function function, bool isMember)
+    private void WriteFunction(Function function, WriteDefinitionsScope scope)
     {
-        foreach (var overload in function.CombineAllOverloads())
+        foreach (var overload in CombineAllOverloads(function))
         {
-            WriteOverload(function, overload, isMember);
+            WriteOverload(function, overload, scope);
         }
     }
 
-    private void WriteOverload(Function function, Overload overload, bool isMember)
+    private IEnumerable<Overload> CombineAllOverloads(Function function)
     {
-        WriteOverloadComment(function, overload);
+        if (function.ParametersOverloads.Length > 0)
+        {
+            var returns = MergeReturns(function);
+
+            foreach (var parameters in function.ParametersOverloads)
+            {
+                if (function.ReturnsOverloads.Length > 0)
+                {
+                    yield return new Overload(parameters.Items, returns);
+                }
+                else
+                {
+                    yield return new Overload(parameters.Items, Array.Empty<Return>());
+                }
+            }
+        }
+        else if (function.ReturnsOverloads.Length > 0)
+        {
+            yield return new Overload(Array.Empty<Parameter>(), MergeReturns(function));
+        }
+        else
+        {
+            yield return new Overload(Array.Empty<Parameter>(), Array.Empty<Return>());
+        }
+    }
+
+    private Return[] MergeReturns(Function function)
+    {
+        if (function.ReturnsOverloads.Length == 0)
+            return Array.Empty<Return>();
+
+        var result = new List<Return>();
+
+        foreach (var returns in function.ReturnsOverloads)
+        {
+            for (var i = 0; i < returns.Items.Length; i++)
+            {
+                var currentReturn = returns.Items[i];
+                var currentReturnType = ConvertToTsType(currentReturn.Type);
+
+                if (result.Count > i)
+                {
+                    var @return = result[i];
+
+                    result[i] = new Return()
+                    {
+                        Type = $"({@return.Type}) | ({currentReturnType})",
+                        Description = $"{@return.Description} **or** {currentReturn.Description}"
+                    };
+                }
+                else
+                {
+                    result.Add(new Return()
+                    {
+                        Type = currentReturnType,
+                        Description = currentReturn.Description
+                    });
+                }
+            }
+        }
+
+        return result.ToArray();
+    }
+
+    private void WriteOverload(Function function, Overload overload, WriteDefinitionsScope scope)
+    {
+        EnterComment();
+
+        WriteDescription(function.Description);
+        WriteSource(function.Source);
+        WriteSeeCollection(function.See);
+
+        foreach (var parameter in overload.Parameters)
+        {
+            var parameterName = parameter.Name;
+
+            if (parameterName == "...")
+                parameterName = "params";
+            else if (_reservedWords.Contains(parameterName))
+                parameterName = $"_{parameterName}";
+
+            Write($"@param {parameterName}");
+
+            if (!string.IsNullOrWhiteSpace(parameter.DefaultValue))
+                Write($" Default: `{parameter.DefaultValue}`.");
+
+            if (!string.IsNullOrWhiteSpace(parameter.Description))
+                Write($" {parameter.Description}");
+
+            WriteLine(null);
+        }
+
+        foreach (var @return in overload.Returns)
+        {
+            WriteLine($"@return {@return.Description}");
+        }
+
+        if (!function.NeedSelf)
+            WriteLine("@noSelf");
+
+        ExitComment();
 
         var functionName = function.Name;
         var isOriginalReservedName = false;
 
-        if (!isMember)
+        switch (scope)
         {
-            if (_reservedWords.Contains(functionName))
-            {
-                functionName = "_" + functionName;
-                isOriginalReservedName = true;
-            }
-            else
-            {
-                Write("export ");
-            }
+            case WriteDefinitionsScope.Local:
+                if (_reservedWords.Contains(functionName))
+                {
+                    functionName = "_" + functionName;
+                    isOriginalReservedName = true;
+                }
+                else
+                {
+                    Write("export ");
+                }
 
-            Write("function ");
+                Write("function ");
+                break;
+            case WriteDefinitionsScope.Global:
+                if (_reservedWords.Contains(functionName))
+                    throw new Exception();
+
+                Write("declare function ");
+                break;
+            case WriteDefinitionsScope.Member:
+                break;
+            default:
+                throw new InvalidDataException();
         }
 
         Write($"{functionName}(");
@@ -180,13 +315,13 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
         }
         else if (overload.Returns.Length == 1)
         {
-            Write($"{ConvertToTsType(overload.Returns[0].Type)}");
+            Write($"{overload.Returns[0].Type}");
         }
         else
         {
             var returns = string.Join(", ", overload.Returns.Select(x =>
             {
-                return ConvertToTsType(x.Type);
+                return x.Type;
             }));
 
             Write($"LuaMultiReturn<[{returns}]>");
@@ -194,49 +329,13 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
 
         WriteLine(";");
 
-        if (!isMember && isOriginalReservedName)
+        if (scope == WriteDefinitionsScope.Local && isOriginalReservedName)
             WriteLine($"export {{ {functionName} as {function.Name} }};");
 
         WriteLine(null);
     }
 
-    private void WriteOverloadComment(Function function, Overload overload)
-    {
-        EnterComment();
-
-        WriteDescription(function.Description);
-        WriteSource(function.Source);
-        WriteSeeCollection(function.See);
-
-        foreach (var parameter in overload.Parameters)
-        {
-            var parameterName = parameter.Name;
-
-            if (parameterName == "...")
-                parameterName = "params";
-            else if (_reservedWords.Contains(parameterName))
-                parameterName = $"_{parameterName}";
-
-            Write($"@param {parameterName}");
-
-            if (!string.IsNullOrWhiteSpace(parameter.DefaultValue))
-                Write($" Default: `{parameter.DefaultValue}`.");
-
-            if (!string.IsNullOrWhiteSpace(parameter.Description))
-                Write($" {parameter.Description}");
-
-            WriteLine(null);
-        }
-
-        foreach (var @return in overload.Returns)
-        {
-            WriteLine($"@return {@return.Description}");
-        }
-
-        ExitComment();
-    }
-
-    private void WriteVariable(Variable variable, bool isMember)
+    private void WriteVariable(Variable variable, WriteDefinitionsScope scope)
     {
         EnterComment();
 
@@ -246,8 +345,19 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
 
         ExitComment();
 
-        if (!isMember)
-            Write("export ");
+        switch (scope)
+        {
+            case WriteDefinitionsScope.Global:
+                Write("declare ");
+                break;
+            case WriteDefinitionsScope.Local:
+                Write("export ");
+                break;
+            case WriteDefinitionsScope.Member:
+                break;
+            default:
+                throw new InvalidDataException();
+        }
 
         Write($"const {variable.Name}");
 
@@ -295,9 +405,7 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
         type = Regex.Replace(type, @"{\s*\[(.+?)\]\s*=\s*(.+?)\s*}", x => $"{{ [key: {ConvertToTsType(x.Groups[1].Value)}]: {ConvertToTsType(x.Groups[2].Value)} }}");
         type = Regex.Replace(type, @"([\[a-zA-Z\]?]+)\s*=", x => $"{ConvertToTsType(x.Groups[1].Value)}:");
         type = Regex.Replace(type, @"{\s*(.+)\.\.\.\s*}", x => $"{ConvertToTsType(x.Groups[1].Value)}[]");
-
-        if (type.EndsWith("..."))
-            type = $"({type[..(type.Length - 3)]})[]";
+        type = Regex.Replace(type, @"([a-zA-Z_]+?)\.\.\.", x => $"({ConvertToTsType(x.Groups[1].Value)})[]");
 
         return type;
     }
@@ -416,7 +524,8 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
 
         if (str != null)
         {
-            str = str.Replace("*/", "*⁠/");
+            if (_comment)
+                str = str.Replace("*/", "*⁠/");
 
             _writer.Write(str);
         }
@@ -450,6 +559,14 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
             throw new Exception();
 
         _indent--;
+    }
+
+    private bool IsIgnoreListContains(string moduleName, string name)
+    {
+        if (_ignoreList.Any(x => x.Item1 == moduleName && x.Item2 == name))
+            return true;
+
+        return false;
     }
 
     public void Dispose()

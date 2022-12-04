@@ -32,12 +32,12 @@ internal sealed class HtmlDefinitionsParser
         if (definitionName.StartsWith(moduleName + '.'))
             definitionName = definitionName[(moduleName.Length + 1)..];
 
-        bool isInstanceFunction = false;
+        bool needSelf = false;
 
         if (definitionName.StartsWith(moduleName + ':'))
         {
             definitionName = definitionName[(moduleName.Length + 1)..];
-            isInstanceFunction = true;
+            needSelf = true;
         }
 
         var source = _enumerator.Current.SelectNodes("*[@class='source-link']").SingleOrDefault()?.GetAttributeValue("href", null);
@@ -63,7 +63,7 @@ internal sealed class HtmlDefinitionsParser
                 match = Regex.Match(definitionName, @"^([a-zA-Z_0-9]+)\(");
 
                 if (match.Success)
-                    return new HtmlFunctionParser(enumerator).ParseFunction(match.Groups[1].Value, isInstanceFunction, source);
+                    return new HtmlFunctionParser(enumerator).ParseFunction(match.Groups[1].Value, needSelf, source);
                 else
                     return new HtmlVariableParser(enumerator).ParseVariable(definitionName, null, source);
             }

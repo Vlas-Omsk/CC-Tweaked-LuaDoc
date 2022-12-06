@@ -14,7 +14,7 @@ For using with lua install [lua-language-server](https://marketplace.visualstudi
 {
   "runtime.version": "Lua 5.1",
   "workspace.library": [
-+   "/path/to/CC-Tweaked-LuaDoc/CCTweaked.LuaDoc/cc_libs_lua"
++   "/path/to/cc_libs_lua"
   ]
 }
 ```
@@ -25,7 +25,7 @@ or add path to VS Code Settings
 {
   "Lua.runtime.version": "Lua 5.1",
   "Lua.workspace.library": [
-+   "/path/to/CC-Tweaked-LuaDoc/CCTweaked.LuaDoc/cc_libs_lua"
++   "/path/to/cc_libs_lua"
   ]
 }
 ```
@@ -39,7 +39,9 @@ For using with TypeScript install [TypeScriptToLua](https://typescripttolua.gith
 ```diff
 {
   "compilerOptions": {
-+   "types": ["/path/to/CC-Tweaked-LuaDoc/CCTweaked.LuaDoc/cc_libs_ts"]
+    "types": [
++     "/path/to/cc_libs_ts"
+    ]
   }
 }
 ```

@@ -483,6 +483,10 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
 
         int index = 0;
 
+        // Examples:
+        // function
+        // () => any
+        // https://github.com/Vlas-Omsk/CC-Tweaked-RGB/blob/7f89fc716868d710fa394efde7ee498fab7b0fee/src/main/resources/data/computercraft/lua/rom/apis/parallel.lua#L120
         while (index < type.Length && (index = type.IndexOf("function", index)) != -1)
         {
             var endBracketIndex = FindEndBracket(type, index + "function".Length);
@@ -495,6 +499,10 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
             index += "function".Length;
         }
 
+        // Examples:
+        // function(partial: string):{ string... } | nil
+        // (partial: string) => string[] | null
+        // https://github.com/Vlas-Omsk/CC-Tweaked-RGB/blob/7f89fc716868d710fa394efde7ee498fab7b0fee/doc/stub/global.lua#L111
         if (type.StartsWith("function"))
         {
             var endBracketIndex = FindEndBracket(type, "function".Length);
@@ -503,11 +511,35 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
             type = $"{(type["function".Length..(endBracketIndex + 1)])} => {ConvertToTsType(type[(returnTypeDelimiterIndex + 1)..])}";
         }
 
+        // Examples:
+        // { string }
+        // (string)[]
+        // https://github.com/Vlas-Omsk/CC-Tweaked-RGB/blob/7f89fc716868d710fa394efde7ee498fab7b0fee/src/main/resources/data/computercraft/lua/rom/apis/settings.lua#L173
         type = Regex.Replace(type, @"{\s*([a-zA-Z_]+?)\s*}", x => $"({ConvertToTsType(x.Groups[1].Value)})[]");
+
+        // Examples:
+        // { [string] = string }
+        // { [key: string]: string }
+        // https://github.com/Vlas-Omsk/CC-Tweaked-RGB/blob/7f89fc716868d710fa394efde7ee498fab7b0fee/doc/stub/http.lua#L80
         type = Regex.Replace(type, @"{\s*\[(.+?)\]\s*=\s*(.+?)\s*}", x => $"{{ [key: {ConvertToTsType(x.Groups[1].Value)}]: {ConvertToTsType(x.Groups[2].Value)} }}");
+
+        // Examples:
+        // { url = string, headers? = { [string] = string }, binary? = boolean, method? = string, redirect? = boolean }
+        // { url: string, headers?: { [key: string]: string }, binary?: boolean, method?: string, redirect?: boolean }
+        // https://github.com/Vlas-Omsk/CC-Tweaked-RGB/blob/7f89fc716868d710fa394efde7ee498fab7b0fee/doc/stub/http.lua#L80
         type = Regex.Replace(type, @"([\[a-zA-Z\]?]+)\s*=", x => $"{ConvertToTsType(x.Groups[1].Value)}:");
+
+        // Examples:
+        // { string... }
+        // string[]
+        // https://github.com/Vlas-Omsk/CC-Tweaked-RGB/blob/7f89fc716868d710fa394efde7ee498fab7b0fee/src/main/java/dan200/computercraft/shared/computer/apis/CommandAPI.java#L104
         type = Regex.Replace(type, @"{\s*(.+)\.\.\.\s*}", x => $"{ConvertToTsType(x.Groups[1].Value)}[]");
-        type = Regex.Replace(type, @"([a-zA-Z_]+?)\.\.\.", x => $"({ConvertToTsType(x.Groups[1].Value)})[]");
+
+        // Examples:
+        // string...
+        // LuaMultiReturn<(string)[]>
+        // https://github.com/Vlas-Omsk/CC-Tweaked-RGB/blob/7f89fc716868d710fa394efde7ee498fab7b0fee/src/main/resources/data/computercraft/lua/rom/apis/peripheral.lua#L155
+        type = Regex.Replace(type, @"([a-zA-Z_]+?)\.\.\.", x => $"LuaMultiReturn<({ConvertToTsType(x.Groups[1].Value)})[]>");
 
         return type;
     }

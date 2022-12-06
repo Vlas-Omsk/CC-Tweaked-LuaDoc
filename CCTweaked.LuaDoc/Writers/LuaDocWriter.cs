@@ -325,9 +325,33 @@ public sealed class LuaDocWriter : IDocWriter, IDisposable
             type = "any";
 
         type = type.Replace("function(", "fun(");
+
+        // Examples:
+        // { string }
+        // (string)[]
+        // https://github.com/Vlas-Omsk/CC-Tweaked-RGB/blob/7f89fc716868d710fa394efde7ee498fab7b0fee/src/main/resources/data/computercraft/lua/rom/apis/settings.lua#L173
         type = Regex.Replace(type, @"{\s*([a-zA-Z_]+?)\s*}", x => $"({ConvertToLuaType(x.Groups[1].Value)})[]");
+
+        // Examples:
+        // { [string] = string }
+        // { [string]: string }
+        // https://github.com/Vlas-Omsk/CC-Tweaked-RGB/blob/7f89fc716868d710fa394efde7ee498fab7b0fee/doc/stub/http.lua#L80
+        //
+        // { url = string, headers? = { [string] = string }, binary? = boolean, method? = string, redirect? = boolean }
+        // { url: string, headers?: { [string]: string }, binary?: boolean, method?: string, redirect?: boolean }
+        // https://github.com/Vlas-Omsk/CC-Tweaked-RGB/blob/7f89fc716868d710fa394efde7ee498fab7b0fee/doc/stub/http.lua#L80
         type = Regex.Replace(type, @"([\[a-zA-Z\]?]+)\s*=", x => $"{ConvertToLuaType(x.Groups[1].Value)}:");
+
+        // Examples:
+        // { string... }
+        // { [number]: string }
+        // https://github.com/Vlas-Omsk/CC-Tweaked-RGB/blob/7f89fc716868d710fa394efde7ee498fab7b0fee/src/main/java/dan200/computercraft/shared/computer/apis/CommandAPI.java#L104
         type = Regex.Replace(type, @"{\s*(.+)\.\.\.\s*}", x => $"{{ [number]: {ConvertToLuaType(x.Groups[1].Value)} }}");
+
+        // Examples:
+        // string...
+        // (string)[]
+        // https://github.com/Vlas-Omsk/CC-Tweaked-RGB/blob/7f89fc716868d710fa394efde7ee498fab7b0fee/src/main/resources/data/computercraft/lua/rom/apis/peripheral.lua#L155
         type = Regex.Replace(type, @"([a-zA-Z_]+?)\.\.\.", x => $"({ConvertToLuaType(x.Groups[1].Value)})[]");
 
         return type;

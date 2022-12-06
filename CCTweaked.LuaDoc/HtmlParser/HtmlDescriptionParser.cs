@@ -61,6 +61,9 @@ internal sealed class HtmlDescriptionParser
                 case "strong":
                     textToAdd = $"**{_enumerator.Current.InnerText}**";
                     break;
+                case "em":
+                    textToAdd = $"*{_enumerator.Current.InnerText}*";
+                    break;
                 case "ul":
                 case "ol":
                     textToAdd = ParseList();
@@ -171,6 +174,7 @@ internal sealed class HtmlDescriptionParser
             node.Name == "h2" ||
             node.Name == "ul" ||
             node.Name == "ol" ||
-            node.Name == "strong";
+            node.Name == "strong" ||
+            node.Name == "em";
     }
 }

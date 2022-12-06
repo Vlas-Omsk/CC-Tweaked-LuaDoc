@@ -1,7 +1,7 @@
 using CCTweaked.LuaDoc.Entities;
 using HtmlAgilityPack;
 
-namespace CCTweaked.LuaDoc.Html;
+namespace CCTweaked.LuaDoc.HtmlParser;
 
 public sealed class HtmlModulesParser
 {
@@ -18,7 +18,9 @@ public sealed class HtmlModulesParser
     {
         _document.Load(_path);
 
-        var contentNode = _document.DocumentNode.SelectNodes("//*[@id='content']").Single();
+        var contentNode = _document.DocumentNode
+            .SelectNodes("//*[@id='content']")
+            .Single();
 
         _enumerator = contentNode.ChildNodes.AsEnumerable().GetEnumerator();
         _enumerator.MoveToNextTaggedNode();
@@ -28,7 +30,7 @@ public sealed class HtmlModulesParser
         if (_enumerator.MoveToNextTaggedNode())
         {
             if (_enumerator.Current.Name != "h3" || _enumerator.Current.InnerText != "Types")
-                throw new Exception();
+                throw new UnexpectedHtmlElementException();
 
             while (_enumerator.MoveToNextTaggedNode())
                 yield return ParseTypeModule();
@@ -38,32 +40,31 @@ public sealed class HtmlModulesParser
     private Module ParseBaseModule()
     {
         if (_enumerator.Current.Name != "h1")
-            throw new Exception();
+            throw new UnexpectedHtmlElementException();
 
-        return ParseModule(_enumerator.Current.InnerText, false);
+        return ParseModule(_enumerator.Current.InnerText, ModuleType.Module);
     }
 
     private Module ParseTypeModule()
     {
         if (_enumerator.Current.Name != "h3")
-            throw new Exception();
+            throw new UnexpectedHtmlElementException();
 
-        return ParseModule(_enumerator.Current.SelectNodes("span").Single().InnerText, true);
+        return ParseModule(
+            _enumerator.Current
+                .SelectNodes("span")
+                .Single()
+                .InnerText,
+            ModuleType.Type
+        );
     }
 
-    private Module ParseModule(string name, bool isType)
+    private Module ParseModule(string name, ModuleType type)
     {
-        var module = new Module()
-        {
-            Name = name,
-            IsType = isType
-        };
+        var module = new Module(name, type);
 
         if (!_enumerator.MoveToNextTaggedNode())
-            throw new Exception();
-
-        if (_enumerator.Current.Name != "p")
-            throw new Exception();
+            throw new UnexpectedEndOfHtmlElementContentException();
 
         module.Description = new HtmlDescriptionParser(_enumerator).ParseDescription();
 
@@ -75,19 +76,27 @@ public sealed class HtmlModulesParser
                 throw new Exception();
         }
 
-        if (_enumerator.Current.Name == "table" && _enumerator.Current.GetClasses().Single() == "definition-list")
+        if (
+            _enumerator.Current.Name == "table" &&
+            _enumerator.Current.GetClasses().Single() == "definition-list"
+        )
         {
             if (!_enumerator.MoveToNextTaggedNode())
-                throw new Exception();
+                throw new UnexpectedEndOfHtmlElementContentException();
         }
 
-        if (_enumerator.Current.Name != "dl" || _enumerator.Current.GetClasses().Single() != "definition")
-            throw new Exception();
+        if (
+            _enumerator.Current.Name != "dl" ||
+            _enumerator.Current.GetClasses().Single() != "definition"
+        )
+            throw new UnexpectedHtmlElementException();
 
         using (var enumerator = _enumerator.Current.ChildNodes.AsEnumerable().GetEnumerator())
         {
             enumerator.MoveToNextTaggedNode();
-            module.Definitions = new HtmlDefinitionsParser(enumerator).ParseDefinitions(name).ToArray();
+            module.Definitions = new HtmlDefinitionsParser(enumerator)
+                .ParseDefinitions(name)
+                .ToArray();
         }
 
         return module;

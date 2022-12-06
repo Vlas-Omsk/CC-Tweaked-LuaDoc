@@ -1,7 +1,7 @@
 using CCTweaked.LuaDoc.Entities;
 using HtmlAgilityPack;
 
-namespace CCTweaked.LuaDoc.Html;
+namespace CCTweaked.LuaDoc.HtmlParser;
 
 internal sealed class HtmlFunctionParser
 {
@@ -14,10 +14,8 @@ internal sealed class HtmlFunctionParser
 
     public Function ParseFunction(string name, bool needSelf, string source)
     {
-        var function = new Function()
+        var function = new Function(name, needSelf)
         {
-            Name = name,
-            NeedSelf = needSelf,
             Source = source
         };
 
@@ -38,10 +36,7 @@ internal sealed class HtmlFunctionParser
                             var items = ((IEnumerable<Parameter>)section.Data).ToArray();
 
                             if (items.Length > 0)
-                                parametersOverloads.Add(new FunctionOverload<Parameter>()
-                                {
-                                    Items = items
-                                });
+                                parametersOverloads.Add(new FunctionOverload<Parameter>(items));
                             break;
                         }
                     case HtmlSectionType.Returns:
@@ -49,10 +44,7 @@ internal sealed class HtmlFunctionParser
                             var items = ((IEnumerable<Return>)section.Data).ToArray();
 
                             if (items.Length > 0)
-                                returnsOverloads.Add(new FunctionOverload<Return>()
-                                {
-                                    Items = items
-                                });
+                                returnsOverloads.Add(new FunctionOverload<Return>(items));
                             break;
                         }
                     case HtmlSectionType.SeeCollection:

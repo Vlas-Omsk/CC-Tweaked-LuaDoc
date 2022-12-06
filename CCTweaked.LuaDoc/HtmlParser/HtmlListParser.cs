@@ -1,30 +1,30 @@
-using CCTweaked.LuaDoc.Entities;
 using HtmlAgilityPack;
 
-namespace CCTweaked.LuaDoc.Html;
+namespace CCTweaked.LuaDoc.HtmlParser;
 
-internal sealed class HtmlSeeCollectionParser
+internal abstract class HtmlListParser<T>
 {
     private readonly IEnumerator<HtmlNode> _enumerator;
 
-    public HtmlSeeCollectionParser(IEnumerator<HtmlNode> enumerator)
+    public HtmlListParser(IEnumerator<HtmlNode> enumerator)
     {
         _enumerator = enumerator;
     }
 
-    public IEnumerable<See> ParseSeeCollection()
+    public IEnumerable<T> ParseList()
     {
         do
         {
             if (_enumerator.Current.Name != "li")
-                throw new Exception();
+                throw new UnexpectedHtmlElementException();
 
             using (var enumerator = _enumerator.Current.ChildNodes.AsEnumerable().GetEnumerator())
             {
-                enumerator.MoveToNextTaggedNode();
-                yield return new HtmlSeeParser(enumerator).ParseSee();
+                yield return ParseItem(enumerator);
             }
         }
         while (_enumerator.MoveToNextTaggedNode());
     }
+
+    protected abstract T ParseItem(IEnumerator<HtmlNode> enumerator);
 }

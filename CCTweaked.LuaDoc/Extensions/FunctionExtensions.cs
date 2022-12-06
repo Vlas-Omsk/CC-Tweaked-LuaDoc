@@ -53,7 +53,7 @@ public static class FunctionExtensions
                         find.Optional != parameter.Optional ||
                         find.Type != parameter.Type
                     )
-                        throw new Exception("Ambiguous match");
+                        throw new Exception("Found parameters with the same name but different data.");
 
                     continue;
                 }

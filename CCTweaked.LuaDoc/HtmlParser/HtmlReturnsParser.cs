@@ -1,7 +1,7 @@
 using CCTweaked.LuaDoc.Entities;
 using HtmlAgilityPack;
 
-namespace CCTweaked.LuaDoc.Html;
+namespace CCTweaked.LuaDoc.HtmlParser;
 
 internal sealed class HtmlReturnsParser : HtmlListParser<Return>
 {
@@ -11,6 +11,7 @@ internal sealed class HtmlReturnsParser : HtmlListParser<Return>
 
     protected override Return ParseItem(IEnumerator<HtmlNode> enumerator)
     {
+        enumerator.MoveNext();
         return new HtmlReturnParser(enumerator).ParseReturn();
     }
 }

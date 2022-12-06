@@ -1,7 +1,10 @@
 namespace CCTweaked.LuaDoc.Entities;
 
-public sealed class Variable : Entity, IDefinition
+public sealed class Variable : Definition
 {
-    public string Name { get; set; }
+    public Variable(string name) : base(name)
+    {
+    }
+
     public string Value { get; set; }
 }

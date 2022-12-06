@@ -1,7 +1,7 @@
 using System.Web;
 using HtmlAgilityPack;
 
-namespace CCTweaked.LuaDoc.Html;
+namespace CCTweaked.LuaDoc.HtmlParser;
 
 internal sealed class HtmlDescriptionParser
 {
@@ -26,7 +26,7 @@ internal sealed class HtmlDescriptionParser
             switch (_enumerator.Current.Name)
             {
                 case "div":
-                    textToAdd = ParseAdmonition(_enumerator.Current);
+                    textToAdd = ParseAdmonition();
                     break;
                 case "table":
                     // TODO: Generate table
@@ -63,34 +63,10 @@ internal sealed class HtmlDescriptionParser
                     break;
                 case "ul":
                 case "ol":
-                    bool first = true;
-
-                    textToAdd = string.Empty;
-
-                    foreach (var node in _enumerator.Current.ChildNodes)
-                    {
-                        if (node.Name == "#text")
-                            continue;
-
-                        if (first)
-                            first = false;
-                        else
-                            textToAdd += Environment.NewLine;
-
-                        if (node.Name != "li")
-                            throw new Exception();
-
-                        textToAdd += " - ";
-
-                        using (var enumerator = node.ChildNodes.AsEnumerable().GetEnumerator())
-                        {
-                            enumerator.MoveNext();
-                            textToAdd += new HtmlDescriptionParser(enumerator).ParseDescription();
-                        }
-                    }
+                    textToAdd = ParseList();
                     break;
                 default:
-                    throw new Exception();
+                    throw new UnexpectedHtmlElementException();
             }
 
             if (!string.IsNullOrWhiteSpace(textToAdd))
@@ -110,9 +86,40 @@ internal sealed class HtmlDescriptionParser
         return text;
     }
 
-    private string ParseAdmonition(HtmlNode node)
+    private string ParseList()
     {
-        var admonitionTypeClass = node.GetClasses().Skip(1).Single();
+        bool first = true;
+
+        var result = string.Empty;
+
+        foreach (var node in _enumerator.Current.ChildNodes)
+        {
+            if (node.Name == "#text")
+                continue;
+
+            if (first)
+                first = false;
+            else
+                result += Environment.NewLine;
+
+            if (node.Name != "li")
+                throw new UnexpectedHtmlElementException();
+
+            result += " - ";
+
+            using (var enumerator = node.ChildNodes.AsEnumerable().GetEnumerator())
+            {
+                enumerator.MoveNext();
+                result += new HtmlDescriptionParser(enumerator).ParseDescription();
+            }
+        }
+
+        return result;
+    }
+
+    private string ParseAdmonition()
+    {
+        var admonitionTypeClass = _enumerator.Current.GetClasses().Skip(1).Single();
         var delimiterIndex = admonitionTypeClass.IndexOf('-');
         var admonitionType = admonitionTypeClass[(delimiterIndex + 1)..];
         var text = string.Empty;
@@ -132,18 +139,18 @@ internal sealed class HtmlDescriptionParser
                 text += " - **Info**";
                 break;
             default:
-                throw new Exception();
+                throw new InvalidDataException();
         }
 
-        using var enumerator = node.ChildNodes.AsEnumerable().GetEnumerator();
+        using var enumerator = _enumerator.Current.ChildNodes.AsEnumerable().GetEnumerator();
 
         if (!enumerator.MoveToNextTaggedNode())
-            throw new Exception();
+            throw new UnexpectedEndOfHtmlElementContentException();
         if (enumerator.Current.GetClasses().Single() != "admonition-heading")
-            throw new Exception();
+            throw new UnexpectedHtmlElementException();
 
         if (!enumerator.MoveToNextTaggedNode())
-            throw new Exception();
+            throw new UnexpectedEndOfHtmlElementContentException();
 
         text += ": " + new HtmlDescriptionParser(enumerator).ParseDescription();
 

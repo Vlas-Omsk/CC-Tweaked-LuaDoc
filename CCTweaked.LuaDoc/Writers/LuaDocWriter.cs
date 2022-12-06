@@ -37,8 +37,8 @@ public sealed class LuaDocWriter : IDocWriter, IDisposable
 
     private void WriteBaseModule(Module module)
     {
-        if (module.IsType)
-            throw new Exception();
+        if (module.Type != ModuleType.Module)
+            throw new Exception("Module is not a module type.");
 
         EnterComment();
 
@@ -66,8 +66,8 @@ public sealed class LuaDocWriter : IDocWriter, IDisposable
 
     private void WriteTypeModule(Module baseModule, Module module)
     {
-        if (!module.IsType)
-            throw new Exception();
+        if (module.Type != ModuleType.Type)
+            throw new Exception("Module is not a type type.");
 
         EnterComment();
 
@@ -107,7 +107,7 @@ public sealed class LuaDocWriter : IDocWriter, IDisposable
             }
             else
             {
-                throw new Exception();
+                throw new ConversionNotSupportedForTypeException(definition.GetType());
             }
         }
     }
@@ -128,19 +128,30 @@ public sealed class LuaDocWriter : IDocWriter, IDisposable
         while (enumerator.MoveNext())
         {
             Write("@overload fun(");
-            Write(string.Join(", ", enumerator.Current.Parameters.Select(x =>
-            {
-                var name = GetParameterLuaFullName(x);
-                var type = ConvertToLuaType(x.Type);
+            Write(
+                string.Join(
+                    ", ",
+                    enumerator.Current.Parameters.Select(x =>
+                    {
+                        var name = GetParameterLuaFullName(x);
+                        var type = ConvertToLuaType(x.Type);
 
-                return $"{name} : {type}";
-            })));
+                        return $"{name} : {type}";
+                    })
+                )
+            );
             Write(")");
 
             if (enumerator.Current.Returns.Length > 0)
             {
                 Write(" : ");
-                Write(string.Join(", ", enumerator.Current.Returns.Select(x => ConvertToLuaType(x.Type))));
+                Write(
+                    string.Join(
+                        ", ",
+                        enumerator.Current.Returns
+                            .Select(x => ConvertToLuaType(x.Type))
+                    )
+                );
             }
 
             WriteLine(null);

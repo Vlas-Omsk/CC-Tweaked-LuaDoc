@@ -1,4 +1,4 @@
-namespace CCTweaked.LuaDoc.Html;
+namespace CCTweaked.LuaDoc.HtmlParser;
 
 internal sealed class HtmlSection
 {

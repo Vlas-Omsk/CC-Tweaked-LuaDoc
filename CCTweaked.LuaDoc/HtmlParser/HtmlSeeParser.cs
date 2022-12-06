@@ -1,7 +1,7 @@
 using CCTweaked.LuaDoc.Entities;
 using HtmlAgilityPack;
 
-namespace CCTweaked.LuaDoc.Html;
+namespace CCTweaked.LuaDoc.HtmlParser;
 
 internal sealed class HtmlSeeParser
 {
@@ -15,7 +15,7 @@ internal sealed class HtmlSeeParser
     public See ParseSee()
     {
         if (_enumerator.Current.Name != "strong")
-            throw new Exception();
+            throw new UnexpectedHtmlElementException();
 
         var see = new See();
         var text = _enumerator.Current.InnerText;

@@ -46,8 +46,8 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
         if (!enumerator.MoveNext())
             throw new Exception();
 
-        if (enumerator.Current.IsType)
-            throw new Exception();
+        if (enumerator.Current.Type != ModuleType.Module)
+            throw new Exception("Module is not a module type.");
 
         EnterComment();
 
@@ -72,12 +72,16 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
             WriteLine(null);
         }
 
-        WriteDefinitions(enumerator.Current.Name, enumerator.Current.Definitions, scope);
+        WriteDefinitions(
+            enumerator.Current.Name,
+            enumerator.Current.Definitions,
+            scope
+        );
 
         while (enumerator.MoveNext())
         {
-            if (!enumerator.Current.IsType)
-                throw new Exception();
+            if (enumerator.Current.Type != ModuleType.Type)
+                throw new Exception("Module is not a type type.");
 
             EnterComment();
 
@@ -96,7 +100,11 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
 
             IncreaseIndent();
 
-            WriteDefinitions(enumerator.Current.Name, enumerator.Current.Definitions, Scope.Member);
+            WriteDefinitions(
+                enumerator.Current.Name,
+                enumerator.Current.Definitions,
+                Scope.Member
+            );
 
             DecreaseIndent();
 
@@ -113,7 +121,7 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
         }
     }
 
-    private void WriteDefinitions(string moduleName, IDefinition[] definitions, Scope scope)
+    private void WriteDefinitions(string moduleName, Definition[] definitions, Scope scope)
     {
         foreach (var definition in definitions)
         {
@@ -130,7 +138,7 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
             }
             else
             {
-                throw new Exception();
+                throw new ConversionNotSupportedForTypeException(definition.GetType());
             }
         }
     }
@@ -226,7 +234,7 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
             case Scope.Member:
                 break;
             default:
-                throw new InvalidDataException();
+                throw new InvalidOperationException();
         }
 
         Write($"{functionName}(");
@@ -271,7 +279,14 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
         }
         else
         {
-            var returns = "LuaMultiReturn<[" + string.Join("]> | LuaMultiReturn<[", overload.Returns.Select(x => GetReturnsType(x))) + "]>";
+            var returns =
+                "LuaMultiReturn<[" +
+                string.Join(
+                    "]> | LuaMultiReturn<[",
+                    overload.Returns
+                        .Select(x => GetReturnsType(x))
+                ) +
+                "]>";
 
             Write(returns);
         }
@@ -286,7 +301,10 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
 
     private string GetReturnsType(Return[] returns)
     {
-        return string.Join(", ", returns.Select(x => ConvertToTsType(x.Type)));
+        return string.Join(
+            ", ",
+            returns.Select(x => ConvertToTsType(x.Type))
+        );
     }
 
     private void WriteVariable(Variable variable, Scope scope)
@@ -310,7 +328,7 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
             case Scope.Member:
                 break;
             default:
-                throw new InvalidDataException();
+                throw new InvalidOperationException();
         }
 
         Write($"const {variable.Name}");

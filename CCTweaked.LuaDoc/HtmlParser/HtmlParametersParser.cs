@@ -1,7 +1,7 @@
 using CCTweaked.LuaDoc.Entities;
 using HtmlAgilityPack;
 
-namespace CCTweaked.LuaDoc.Html;
+namespace CCTweaked.LuaDoc.HtmlParser;
 
 internal sealed class HtmlParametersParser : HtmlListParser<Parameter>
 {
@@ -11,6 +11,7 @@ internal sealed class HtmlParametersParser : HtmlListParser<Parameter>
 
     protected override Parameter ParseItem(IEnumerator<HtmlNode> enumerator)
     {
+        enumerator.MoveToNextTaggedNode();
         return new HtmlParameterParser(enumerator).ParseParameter();
     }
 }

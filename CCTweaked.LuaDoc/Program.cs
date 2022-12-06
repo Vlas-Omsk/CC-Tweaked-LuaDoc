@@ -1,4 +1,4 @@
-using CCTweaked.LuaDoc.Html;
+using CCTweaked.LuaDoc.HtmlParser;
 using CCTweaked.LuaDoc.Writers;
 
 namespace CCTweaked.LuaDoc;

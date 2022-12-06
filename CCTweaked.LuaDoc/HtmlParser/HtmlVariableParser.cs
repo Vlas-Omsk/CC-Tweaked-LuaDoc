@@ -1,7 +1,7 @@
 using CCTweaked.LuaDoc.Entities;
 using HtmlAgilityPack;
 
-namespace CCTweaked.LuaDoc.Html;
+namespace CCTweaked.LuaDoc.HtmlParser;
 
 internal sealed class HtmlVariableParser
 {
@@ -14,9 +14,8 @@ internal sealed class HtmlVariableParser
 
     public Variable ParseVariable(string name, string value, string source)
     {
-        var variable = new Variable()
+        var variable = new Variable(name)
         {
-            Name = name,
             Value = value,
             Source = source
         };

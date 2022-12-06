@@ -2,7 +2,7 @@ using System.Web;
 using CCTweaked.LuaDoc.Entities;
 using HtmlAgilityPack;
 
-namespace CCTweaked.LuaDoc.Html;
+namespace CCTweaked.LuaDoc.HtmlParser;
 
 internal sealed class HtmlReturnParser
 {
@@ -19,12 +19,19 @@ internal sealed class HtmlReturnParser
 
         do
         {
-            if (_enumerator.Current.Name == "span" || !string.IsNullOrWhiteSpace(_enumerator.Current.InnerText))
+            if (
+                _enumerator.Current.Name == "span" ||
+                !string.IsNullOrWhiteSpace(_enumerator.Current.InnerText)
+            )
                 break;
         }
         while (_enumerator.MoveNext());
 
-        if (_enumerator.Current != null && _enumerator.Current.Name == "span" && _enumerator.Current.GetClasses().Single() == "type")
+        if (
+            _enumerator.Current != null &&
+            _enumerator.Current.Name == "span" &&
+            _enumerator.Current.GetClasses().Single() == "type"
+        )
         {
             @return.Type = HttpUtility.HtmlDecode(_enumerator.Current.InnerText);
             _enumerator.MoveNext();

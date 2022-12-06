@@ -2,7 +2,7 @@ using System.Text.RegularExpressions;
 using CCTweaked.LuaDoc.Entities;
 using HtmlAgilityPack;
 
-namespace CCTweaked.LuaDoc.Html;
+namespace CCTweaked.LuaDoc.HtmlParser;
 
 internal sealed class HtmlDefinitionsParser
 {
@@ -13,7 +13,7 @@ internal sealed class HtmlDefinitionsParser
         _enumerator = enumerator;
     }
 
-    public IEnumerable<IDefinition> ParseDefinitions(string moduleName)
+    public IEnumerable<Definition> ParseDefinitions(string moduleName)
     {
         do
         {
@@ -22,12 +22,15 @@ internal sealed class HtmlDefinitionsParser
         while (_enumerator.MoveToNextTaggedNode());
     }
 
-    private IDefinition ParseDefinition(string moduleName)
+    private Definition ParseDefinition(string moduleName)
     {
         if (_enumerator.Current.Name != "dt")
-            throw new InvalidDataException();
+            throw new UnexpectedHtmlElementException();
 
-        var definitionName = _enumerator.Current.SelectNodes("*[contains(concat(' ', @class, ' '), ' definition-name ')]").First().InnerText;
+        var definitionName = _enumerator.Current
+            .SelectNodes("*[contains(concat(' ', @class, ' '), ' definition-name ')]")
+            .First()
+            .InnerText;
 
         if (definitionName.StartsWith(moduleName + '.'))
             definitionName = definitionName[(moduleName.Length + 1)..];
@@ -40,13 +43,16 @@ internal sealed class HtmlDefinitionsParser
             needSelf = true;
         }
 
-        var source = _enumerator.Current.SelectNodes("*[@class='source-link']").SingleOrDefault()?.GetAttributeValue("href", null);
+        var source = _enumerator.Current
+            .SelectNodes("*[@class='source-link']")
+            .SingleOrDefault()?
+            .GetAttributeValue("href", null);
 
         if (!_enumerator.MoveToNextTaggedNode())
-            throw new Exception();
+            throw new UnexpectedEndOfHtmlElementContentException();
 
         if (_enumerator.Current.Name != "dd")
-            throw new InvalidDataException();
+            throw new UnexpectedHtmlElementException();
 
         using (var enumerator = _enumerator.Current.ChildNodes.AsEnumerable().GetEnumerator())
         {

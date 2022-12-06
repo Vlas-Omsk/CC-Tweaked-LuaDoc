@@ -4,6 +4,8 @@ Type generator for CC-Tweaked.
 
 ## Using
 
+Download types from [releases](https://github.com/Vlas-Omsk/CC-Tweaked-LuaDoc/releases) or generate them (See [Generating Types](https://github.com/Vlas-Omsk/CC-Tweaked-LuaDoc#generating-types)).
+
 ### Lua
 
 For using with lua install [lua-language-server](https://marketplace.visualstudio.com/items?itemName=sumneko.lua) extension for VS Code and modify `.luarc.json` in workspace root directory

@@ -18,13 +18,14 @@ internal sealed class HtmlSectionsParser
 
         do
         {
+            if (_enumerator.Current.Name != "h3" && _enumerator.Current.InnerText != "Or")
+                break;
+
             if (_enumerator.Current.InnerText != "Or")
                 section = _enumerator.Current.InnerText;
 
             if (section == null)
                 throw new UnexpectedHtmlElementException();
-
-            var moveNext = true;
 
             switch (section)
             {
@@ -44,12 +45,8 @@ internal sealed class HtmlSectionsParser
                         throw new UnexpectedEndOfHtmlElementContentException();
                     break;
                 default:
-                    moveNext = false;
-                    break;
+                    throw new Exception("Unexpected section name");
             }
-
-            if (!moveNext)
-                break;
         }
         while (_enumerator.MoveToNextTaggedNode());
     }

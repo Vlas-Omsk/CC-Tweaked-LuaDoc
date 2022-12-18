@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using System.Web;
 using HtmlAgilityPack;
 
@@ -32,13 +33,13 @@ internal sealed class HtmlDescriptionParser
                     // TODO: Generate table
                     break;
                 case "#text":
-                    textToAdd = _enumerator.Current.InnerText.ReplaceLineEndings(" ");
+                    textToAdd = _enumerator.Current.InnerText.ReplaceLineEndings(" ").Trim();
                     break;
                 case "code":
                     textToAdd = $"`{_enumerator.Current.InnerText.Trim()}`";
                     break;
                 case "a":
-                    textToAdd = $"{_enumerator.Current.InnerText.Trim()}";
+                    textToAdd = ParseLink();
                     break;
                 case "span":
                     textToAdd = _enumerator.Current.InnerText.Trim();
@@ -59,10 +60,10 @@ internal sealed class HtmlDescriptionParser
                     break;
                 case "h2":
                 case "strong":
-                    textToAdd = $"**{_enumerator.Current.InnerText}**";
+                    textToAdd = $"**{_enumerator.Current.InnerText.Trim()}**";
                     break;
                 case "em":
-                    textToAdd = $"*{_enumerator.Current.InnerText}*";
+                    textToAdd = $"*{_enumerator.Current.InnerText.Trim()}*";
                     break;
                 case "ul":
                 case "ol":
@@ -74,12 +75,33 @@ internal sealed class HtmlDescriptionParser
 
             if (!string.IsNullOrWhiteSpace(textToAdd))
             {
-                if (prevNodeName == "p" || prevNodeName == "pre" || prevNodeName == "div")
-                    text += Environment.NewLine + Environment.NewLine;
+                textToAdd = HttpUtility.HtmlDecode(textToAdd);
+
+                if (
+                    prevNodeName == "p" ||
+                    prevNodeName == "pre" ||
+                    prevNodeName == "div" ||
+                    prevNodeName == "h2"
+                )
+                {
+                    text += Environment.NewLine + Environment.NewLine + textToAdd;
+                }
+                else if (
+                    prevNodeName == "#text" ||
+                    prevNodeName == "code" ||
+                    prevNodeName == "span" ||
+                    prevNodeName == "strong" ||
+                    prevNodeName == "em"
+                )
+                {
+                    text += ' ' + textToAdd;
+                }
+                else
+                {
+                    text += textToAdd;
+                }
 
                 prevNodeName = _enumerator.Current.Name;
-
-                text += HttpUtility.HtmlDecode(textToAdd);
             }
 
             if (!_enumerator.MoveNext())
@@ -89,11 +111,28 @@ internal sealed class HtmlDescriptionParser
         return text;
     }
 
+    private string ParseLink()
+    {
+        var hrefAttribute = _enumerator.Current.GetAttributeValue<string>("href", null);
+
+        if (hrefAttribute == null)
+            throw new Exception("Unexpected null href");
+
+        var match = Regex.Match(hrefAttribute, @"(.+)\.html(#v:(.+))?");
+
+        var link = "{@link " + match.Groups[1].Value;
+
+        if (match.Groups[2].Success)
+            link += '.' + match.Groups[3].Value;
+
+        return link + '}';
+    }
+
     private string ParseList()
     {
         bool first = true;
 
-        var result = string.Empty;
+        var result = "";
 
         foreach (var node in _enumerator.Current.ChildNodes)
         {
@@ -125,21 +164,21 @@ internal sealed class HtmlDescriptionParser
         var admonitionTypeClass = _enumerator.Current.GetClasses().Skip(1).Single();
         var delimiterIndex = admonitionTypeClass.IndexOf('-');
         var admonitionType = admonitionTypeClass[(delimiterIndex + 1)..];
-        var text = string.Empty;
+        var text = Environment.NewLine + Environment.NewLine;
 
         switch (admonitionType)
         {
             case "tip":
-                text += " - **Tip**";
+                text += "**Tip**";
                 break;
             case "note":
-                text += " - **Note**";
+                text += "**Note**";
                 break;
             case "caution":
-                text += " - **Caution**";
+                text += "**Caution**";
                 break;
             case "info":
-                text += " - **Info**";
+                text += "**Info**";
                 break;
             default:
                 throw new InvalidDataException();

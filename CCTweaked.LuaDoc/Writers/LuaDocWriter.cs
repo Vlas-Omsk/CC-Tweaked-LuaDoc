@@ -350,9 +350,9 @@ public sealed class LuaDocWriter : IDocWriter, IDisposable
 
         // Examples:
         // string...
-        // (string)[]
+        // (string)...
         // https://github.com/Vlas-Omsk/CC-Tweaked-RGB/blob/7f89fc716868d710fa394efde7ee498fab7b0fee/src/main/resources/data/computercraft/lua/rom/apis/peripheral.lua#L155
-        type = Regex.Replace(type, @"([a-zA-Z_]+?)\.\.\.", x => $"({ConvertToLuaType(x.Groups[1].Value)})[]");
+        type = Regex.Replace(type, @"([a-zA-Z_]+?)\.\.\.", x => $"({ConvertToLuaType(x.Groups[1].Value)})...");
 
         return type;
     }

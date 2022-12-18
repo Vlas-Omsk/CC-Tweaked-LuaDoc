@@ -29,16 +29,18 @@ public static class Program
 
     private static void GenerateTsDocs(string[] files, string htmlDocsDirectory)
     {
-        Directory.CreateDirectory(_tsOutputPath);
-
         var modulesCache = new Dictionary<string, Module[]>();
         var modulesToWrite = new Dictionary<string, Module[]>();
+
+        Directory.CreateDirectory(_tsOutputPath);
 
         using var indexWriter = new StreamWriter(Path.Combine(_tsOutputPath, "index.d.ts"));
 
         foreach (var filePath in files)
         {
             var relativeDirectory = Path.GetRelativePath(htmlDocsDirectory, Path.GetDirectoryName(filePath));
+
+            Directory.CreateDirectory(Path.Combine(_tsOutputPath, relativeDirectory));
 
             var modules = new HtmlModulesParser(filePath, relativeDirectory).ParseModules().ToArray();
 
@@ -60,7 +62,7 @@ public static class Program
 
             var fileName = Path.GetFileNameWithoutExtension(filePath);
 
-            using var writer = new TsWriter(Path.Combine(_tsOutputPath, fileName + ".d.ts"));
+            using var writer = new TsWriter(Path.Combine(_tsOutputPath, relativeDirectory, fileName + ".d.ts"));
 
             var docWriter = new TsDocWriter(writer);
             docWriter.Write(modules, extends);
@@ -85,7 +87,7 @@ public static class Program
 
                 var fileName = Path.GetFileNameWithoutExtension(keyValue.Key);
 
-                using var writer = new TsWriter(Path.Combine(_tsOutputPath, fileName + ".d.ts"));
+                using var writer = new TsWriter(Path.Combine(_tsOutputPath, relativeDirectory, fileName + ".d.ts"));
 
                 var docWriter = new TsDocWriter(writer);
                 docWriter.Write(keyValue.Value, modulesCache[@interface]);
@@ -100,16 +102,16 @@ public static class Program
 
     private static void GenerateLuaDocs(string[] files, string htmlDocsDirectory)
     {
-        Directory.CreateDirectory(_luaOutputPath);
-
         foreach (var filePath in files)
         {
             var relativeDirectory = Path.GetRelativePath(htmlDocsDirectory, Path.GetDirectoryName(filePath));
 
+            Directory.CreateDirectory(Path.Combine(_luaOutputPath, relativeDirectory));
+
             var modules = new HtmlModulesParser(filePath, relativeDirectory).ParseModules();
             var fileName = Path.GetFileNameWithoutExtension(filePath);
 
-            using var writer = new LuaWriter(Path.Combine(_luaOutputPath, fileName + ".lua"));
+            using var writer = new LuaWriter(Path.Combine(_luaOutputPath, relativeDirectory, fileName + ".lua"));
 
             var docWriter = new LuaDocWriter(writer);
             docWriter.Write(modules);

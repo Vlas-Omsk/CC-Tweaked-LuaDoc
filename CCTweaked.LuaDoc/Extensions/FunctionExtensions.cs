@@ -49,7 +49,6 @@ public static class FunctionExtensions
                 if (find != null)
                 {
                     if (
-                        find.Description != parameter.Description ||
                         find.Optional != parameter.Optional ||
                         find.Type != parameter.Type
                     )

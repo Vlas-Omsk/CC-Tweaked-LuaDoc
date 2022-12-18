@@ -6,10 +6,12 @@ namespace CCTweaked.LuaDoc.HtmlParser;
 internal sealed class HtmlFunctionParser
 {
     private readonly IEnumerator<HtmlNode> _enumerator;
+    private readonly string _basePath;
 
-    public HtmlFunctionParser(IEnumerator<HtmlNode> enumerator)
+    public HtmlFunctionParser(IEnumerator<HtmlNode> enumerator, string basePath)
     {
         _enumerator = enumerator;
+        _basePath = basePath;
     }
 
     public Function ParseFunction(string name, bool needSelf, string source)
@@ -20,14 +22,14 @@ internal sealed class HtmlFunctionParser
         };
 
         if (_enumerator.Current != null)
-            function.Description = new HtmlDescriptionParser(_enumerator).ParseDescription();
+            function.Description = new HtmlDescriptionParser(_enumerator, _basePath).ParseDescription().ToArray();
 
         if (_enumerator.Current != null)
         {
             var parametersOverloads = new List<FunctionOverload<Parameter>>();
             var returnsOverloads = new List<FunctionOverload<Return>>();
 
-            foreach (var section in new HtmlSectionsParser(_enumerator).ParseSections())
+            foreach (var section in new HtmlSectionsParser(_enumerator, _basePath).ParseSections())
             {
                 switch (section.Type)
                 {

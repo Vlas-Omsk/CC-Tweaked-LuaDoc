@@ -1,7 +1,9 @@
+using CCTweaked.LuaDoc.Entities.Description;
+
 namespace CCTweaked.LuaDoc.Entities;
 
 public sealed class See
 {
-    public string Link { get; set; }
-    public string Description { get; set; }
+    public LinkNode Link { get; set; }
+    public IDescriptionNode[] Description { get; set; }
 }

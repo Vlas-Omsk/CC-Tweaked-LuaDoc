@@ -7,10 +7,12 @@ namespace CCTweaked.LuaDoc.HtmlParser;
 internal sealed class HtmlDefinitionsParser
 {
     private readonly IEnumerator<HtmlNode> _enumerator;
+    private readonly string _basePath;
 
-    public HtmlDefinitionsParser(IEnumerator<HtmlNode> enumerator)
+    public HtmlDefinitionsParser(IEnumerator<HtmlNode> enumerator, string basePath)
     {
         _enumerator = enumerator;
+        _basePath = basePath;
     }
 
     public IEnumerable<Definition> ParseDefinitions(string moduleName)
@@ -62,16 +64,16 @@ internal sealed class HtmlDefinitionsParser
 
             if (match.Success)
             {
-                return new HtmlVariableParser(enumerator).ParseVariable(match.Groups[1].Value, match.Groups[2].Value, source);
+                return new HtmlVariableParser(enumerator, _basePath).ParseVariable(match.Groups[1].Value, match.Groups[2].Value, source);
             }
             else
             {
                 match = Regex.Match(definitionName, @"^([a-zA-Z_0-9]+)\(");
 
                 if (match.Success)
-                    return new HtmlFunctionParser(enumerator).ParseFunction(match.Groups[1].Value, needSelf, source);
+                    return new HtmlFunctionParser(enumerator, _basePath).ParseFunction(match.Groups[1].Value, needSelf, source);
                 else
-                    return new HtmlVariableParser(enumerator).ParseVariable(definitionName, null, source);
+                    return new HtmlVariableParser(enumerator, _basePath).ParseVariable(definitionName, null, source);
             }
         }
     }

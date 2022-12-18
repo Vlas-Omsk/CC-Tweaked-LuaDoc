@@ -1,5 +1,4 @@
-using System.Text.RegularExpressions;
-using System.Web;
+using CCTweaked.LuaDoc.Entities.Description;
 using HtmlAgilityPack;
 
 namespace CCTweaked.LuaDoc.HtmlParser;
@@ -7,178 +6,134 @@ namespace CCTweaked.LuaDoc.HtmlParser;
 internal sealed class HtmlDescriptionParser
 {
     private readonly IEnumerator<HtmlNode> _enumerator;
+    private readonly string _basePath;
 
-    public HtmlDescriptionParser(IEnumerator<HtmlNode> enumerator)
+    public HtmlDescriptionParser(IEnumerator<HtmlNode> enumerator, string basePath)
     {
         _enumerator = enumerator;
+        _basePath = basePath;
     }
 
     private bool IsCurrentDescriptionNode => IsDescriptionNode(_enumerator.Current);
 
-    public string ParseDescription()
+    public IEnumerable<IDescriptionNode> ParseDescription()
     {
-        var text = string.Empty;
-        string prevNodeName = null;
-
         while (IsCurrentDescriptionNode)
         {
-            string textToAdd = null;
-
             switch (_enumerator.Current.Name)
             {
                 case "div":
-                    textToAdd = ParseAdmonition();
+                    if (_enumerator.Current.HasClass("admonition"))
+                    {
+                        yield return ParseAdmonition();
+                    }
                     break;
                 case "table":
                     // TODO: Generate table
                     break;
                 case "#text":
-                    textToAdd = _enumerator.Current.InnerText.ReplaceLineEndings(" ").Trim();
+                    yield return new TextNode(TextNodeStyle.Normal, _enumerator.Current.InnerText);
                     break;
                 case "code":
-                    textToAdd = $"`{_enumerator.Current.InnerText.Trim()}`";
+                    yield return new CodeNode(_enumerator.Current.InnerText);
                     break;
                 case "a":
-                    textToAdd = ParseLink();
+                    yield return ParseLink();
                     break;
                 case "span":
-                    textToAdd = _enumerator.Current.InnerText.Trim();
+                    yield return new TextNode(TextNodeStyle.Normal, _enumerator.Current.InnerText.Trim());
                     break;
                 case "p":
                     using (var enumerator = _enumerator.Current.ChildNodes.AsEnumerable().GetEnumerator())
                     {
                         enumerator.MoveNext();
-                        textToAdd = new HtmlDescriptionParser(enumerator).ParseDescription();
+                        yield return new ParagraphNode(ParagraphNodeType.Default, new HtmlDescriptionParser(enumerator, _basePath).ParseDescription().ToArray());
                     }
                     break;
                 case "pre":
                     using (var enumerator = _enumerator.Current.ChildNodes.AsEnumerable().GetEnumerator())
                     {
                         enumerator.MoveNext();
-                        textToAdd = $"```{Environment.NewLine}{new HtmlDescriptionParser(enumerator).ParseDescription()}{Environment.NewLine}```";
+                        yield return new ParagraphNode(ParagraphNodeType.Formatted, new HtmlDescriptionParser(enumerator, _basePath).ParseDescription().ToArray());
                     }
                     break;
                 case "h2":
+                    yield return new TextNode(TextNodeStyle.Header, _enumerator.Current.InnerText.Trim());
+                    break;
                 case "strong":
-                    textToAdd = $"**{_enumerator.Current.InnerText.Trim()}**";
+                    yield return new TextNode(TextNodeStyle.Bold, _enumerator.Current.InnerText.Trim());
                     break;
                 case "em":
-                    textToAdd = $"*{_enumerator.Current.InnerText.Trim()}*";
+                    yield return new TextNode(TextNodeStyle.Italic, _enumerator.Current.InnerText.Trim());
                     break;
                 case "ul":
                 case "ol":
-                    textToAdd = ParseList();
+                    yield return ParseList();
                     break;
                 default:
                     throw new UnexpectedHtmlElementException();
             }
 
-            if (!string.IsNullOrWhiteSpace(textToAdd))
-            {
-                textToAdd = HttpUtility.HtmlDecode(textToAdd);
-
-                if (
-                    prevNodeName == "p" ||
-                    prevNodeName == "pre" ||
-                    prevNodeName == "div" ||
-                    prevNodeName == "h2"
-                )
-                {
-                    text += Environment.NewLine + Environment.NewLine + textToAdd;
-                }
-                else if (
-                    prevNodeName == "#text" ||
-                    prevNodeName == "code" ||
-                    prevNodeName == "span" ||
-                    prevNodeName == "strong" ||
-                    prevNodeName == "em"
-                )
-                {
-                    text += ' ' + textToAdd;
-                }
-                else
-                {
-                    text += textToAdd;
-                }
-
-                prevNodeName = _enumerator.Current.Name;
-            }
-
             if (!_enumerator.MoveNext())
                 break;
         }
-
-        return text;
     }
 
-    private string ParseLink()
+    private LinkNode ParseLink()
     {
-        var hrefAttribute = _enumerator.Current.GetAttributeValue<string>("href", null);
+        var href = _enumerator.Current.GetAttributeValue<string>("href", null);
 
-        if (hrefAttribute == null)
+        if (href == null)
             throw new Exception("Unexpected null href");
 
-        var match = Regex.Match(hrefAttribute, @"(.+)\.html(#v:(.+))?");
+        var name = _enumerator.Current.InnerText;
 
-        var link = "{@link " + match.Groups[1].Value;
-
-        if (match.Groups[2].Success)
-            link += '.' + match.Groups[3].Value;
-
-        return link + '}';
+        return HtmlLinkParser.ParseLink(_basePath, href, name);
     }
 
-    private string ParseList()
+    private ListNode ParseList()
     {
-        bool first = true;
-
-        var result = "";
+        var items = new List<ListItemNode>();
 
         foreach (var node in _enumerator.Current.ChildNodes)
         {
             if (node.Name == "#text")
                 continue;
 
-            if (first)
-                first = false;
-            else
-                result += Environment.NewLine;
-
             if (node.Name != "li")
                 throw new UnexpectedHtmlElementException();
-
-            result += " - ";
 
             using (var enumerator = node.ChildNodes.AsEnumerable().GetEnumerator())
             {
                 enumerator.MoveNext();
-                result += new HtmlDescriptionParser(enumerator).ParseDescription();
+                items.Add(new ListItemNode(new HtmlDescriptionParser(enumerator, _basePath).ParseDescription().ToArray()));
             }
         }
 
-        return result;
+        return new ListNode(items.ToArray());
     }
 
-    private string ParseAdmonition()
+    private AdmonitionNode ParseAdmonition()
     {
         var admonitionTypeClass = _enumerator.Current.GetClasses().Skip(1).Single();
         var delimiterIndex = admonitionTypeClass.IndexOf('-');
         var admonitionType = admonitionTypeClass[(delimiterIndex + 1)..];
-        var text = Environment.NewLine + Environment.NewLine;
+
+        AdmonitionNodeType nodeType;
 
         switch (admonitionType)
         {
             case "tip":
-                text += "**Tip**";
+                nodeType = AdmonitionNodeType.Tip;
                 break;
             case "note":
-                text += "**Note**";
+                nodeType = AdmonitionNodeType.Note;
                 break;
             case "caution":
-                text += "**Caution**";
+                nodeType = AdmonitionNodeType.Caution;
                 break;
             case "info":
-                text += "**Info**";
+                nodeType = AdmonitionNodeType.Info;
                 break;
             default:
                 throw new InvalidDataException();
@@ -194,15 +149,13 @@ internal sealed class HtmlDescriptionParser
         if (!enumerator.MoveToNextTaggedNode())
             throw new UnexpectedEndOfHtmlElementContentException();
 
-        text += ": " + new HtmlDescriptionParser(enumerator).ParseDescription();
-
-        return text;
+        return new AdmonitionNode(nodeType, new HtmlDescriptionParser(enumerator, _basePath).ParseDescription().ToArray());
     }
 
     public static bool IsDescriptionNode(HtmlNode node)
     {
         return
-            (node.Name == "div" && node.HasClass("admonition")) ||
+            (node.Name == "div" && (node.HasClass("admonition") || node.HasClass("recipe-container"))) ||
             (node.Name == "table" && !node.GetClasses().Any()) ||
             node.Name == "#text" ||
             node.Name == "code" ||

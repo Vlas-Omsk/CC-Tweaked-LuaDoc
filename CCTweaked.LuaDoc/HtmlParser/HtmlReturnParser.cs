@@ -7,10 +7,12 @@ namespace CCTweaked.LuaDoc.HtmlParser;
 internal sealed class HtmlReturnParser
 {
     private readonly IEnumerator<HtmlNode> _enumerator;
+    private readonly string _basePath;
 
-    public HtmlReturnParser(IEnumerator<HtmlNode> enumerator)
+    public HtmlReturnParser(IEnumerator<HtmlNode> enumerator, string basePath)
     {
         _enumerator = enumerator;
+        _basePath = basePath;
     }
 
     public Return ParseReturn()
@@ -38,7 +40,7 @@ internal sealed class HtmlReturnParser
         }
 
         if (_enumerator.Current != null)
-            @return.Description = new HtmlDescriptionParser(_enumerator).ParseDescription();
+            @return.Description = new HtmlDescriptionParser(_enumerator, _basePath).ParseDescription().ToArray();
 
         return @return;
     }

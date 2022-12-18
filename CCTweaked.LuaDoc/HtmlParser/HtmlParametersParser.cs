@@ -5,13 +5,16 @@ namespace CCTweaked.LuaDoc.HtmlParser;
 
 internal sealed class HtmlParametersParser : HtmlListParser<Parameter>
 {
-    public HtmlParametersParser(IEnumerator<HtmlNode> enumerator) : base(enumerator)
+    private readonly string _basePath;
+
+    public HtmlParametersParser(IEnumerator<HtmlNode> enumerator, string basePath) : base(enumerator)
     {
+        _basePath = basePath;
     }
 
     protected override Parameter ParseItem(IEnumerator<HtmlNode> enumerator)
     {
         enumerator.MoveToNextTaggedNode();
-        return new HtmlParameterParser(enumerator).ParseParameter();
+        return new HtmlParameterParser(enumerator, _basePath).ParseParameter();
     }
 }

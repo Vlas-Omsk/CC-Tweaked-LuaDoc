@@ -6,12 +6,14 @@ namespace CCTweaked.LuaDoc.HtmlParser;
 public sealed class HtmlModulesParser
 {
     private readonly string _path;
+    private readonly string _basePath;
     private readonly HtmlDocument _document = new HtmlDocument();
     private IEnumerator<HtmlNode> _enumerator;
 
-    public HtmlModulesParser(string path)
+    public HtmlModulesParser(string path, string basePath)
     {
         _path = path;
+        _basePath = basePath;
     }
 
     public IEnumerable<Module> ParseModules()
@@ -66,9 +68,9 @@ public sealed class HtmlModulesParser
         if (!_enumerator.MoveToNextTaggedNode())
             throw new UnexpectedEndOfHtmlElementContentException();
 
-        module.Description = new HtmlDescriptionParser(_enumerator).ParseDescription();
+        module.Description = new HtmlDescriptionParser(_enumerator, _basePath).ParseDescription().ToArray();
 
-        foreach (var section in new HtmlSectionsParser(_enumerator).ParseSections())
+        foreach (var section in new HtmlSectionsParser(_enumerator, _basePath).ParseSections())
         {
             if (section.Type == HtmlSectionType.SeeCollection)
                 module.See = ((IEnumerable<See>)section.Data).ToArray();
@@ -94,7 +96,7 @@ public sealed class HtmlModulesParser
         using (var enumerator = _enumerator.Current.ChildNodes.AsEnumerable().GetEnumerator())
         {
             enumerator.MoveToNextTaggedNode();
-            module.Definitions = new HtmlDefinitionsParser(enumerator)
+            module.Definitions = new HtmlDefinitionsParser(enumerator, _basePath)
                 .ParseDefinitions(name)
                 .ToArray();
         }

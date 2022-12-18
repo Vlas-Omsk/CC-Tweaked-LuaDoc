@@ -6,10 +6,12 @@ namespace CCTweaked.LuaDoc.HtmlParser;
 internal sealed class HtmlSectionsParser
 {
     private readonly IEnumerator<HtmlNode> _enumerator;
+    private readonly string _basePath;
 
-    public HtmlSectionsParser(IEnumerator<HtmlNode> enumerator)
+    public HtmlSectionsParser(IEnumerator<HtmlNode> enumerator, string basePath)
     {
         _enumerator = enumerator;
+        _basePath = basePath;
     }
 
     public IEnumerable<HtmlSection> ParseSections()
@@ -65,7 +67,7 @@ internal sealed class HtmlSectionsParser
         using (var enumerator = _enumerator.Current.ChildNodes.AsEnumerable().GetEnumerator())
         {
             enumerator.MoveToNextTaggedNode();
-            return new HtmlParametersParser(enumerator).ParseList();
+            return new HtmlParametersParser(enumerator, _basePath).ParseList();
         }
     }
 
@@ -83,7 +85,7 @@ internal sealed class HtmlSectionsParser
         using (var enumerator = _enumerator.Current.ChildNodes.AsEnumerable().GetEnumerator())
         {
             enumerator.MoveToNextTaggedNode();
-            return new HtmlReturnsParser(enumerator).ParseList();
+            return new HtmlReturnsParser(enumerator, _basePath).ParseList();
         }
     }
 
@@ -98,7 +100,7 @@ internal sealed class HtmlSectionsParser
         using (var enumerator = _enumerator.Current.ChildNodes.AsEnumerable().GetEnumerator())
         {
             enumerator.MoveToNextTaggedNode();
-            return new HtmlSeeCollectionParser(enumerator).ParseList();
+            return new HtmlSeeCollectionParser(enumerator, _basePath).ParseList();
         }
     }
 }

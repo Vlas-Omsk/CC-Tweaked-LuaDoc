@@ -1,9 +1,10 @@
 using System.Text.RegularExpressions;
 using CCTweaked.LuaDoc.Entities;
+using CCTweaked.LuaDoc.Entities.Description;
 
 namespace CCTweaked.LuaDoc.Writers;
 
-public sealed class TsDocWriter : IDocWriter, IDisposable
+public sealed class TsDocWriter : IDocWriter
 {
     private static readonly string[] _reservedWords =
     {
@@ -18,10 +19,8 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
         ("io", "stderr")
     };
     private const string _globalObjectName = "_G";
-    private readonly TextWriter _writer;
-    private int _indent;
-    private bool _comment;
-    private bool _isCursorOnNewLine = true;
+
+    private readonly TsWriter _writer;
 
     private enum Scope
     {
@@ -30,11 +29,7 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
         Member
     }
 
-    public TsDocWriter(string path) : this(new StreamWriter(path))
-    {
-    }
-
-    public TsDocWriter(TextWriter writer)
+    public TsDocWriter(TsWriter writer)
     {
         _writer = writer;
     }
@@ -49,13 +44,13 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
         if (enumerator.Current.Type != ModuleType.Module)
             throw new Exception("Module is not a module type.");
 
-        EnterComment();
+        _writer.EnterComment();
 
         WriteDescription(enumerator.Current.Description);
         WriteSource(enumerator.Current.Source);
         WriteSeeCollection(enumerator.Current.See);
 
-        ExitComment();
+        _writer.ExitComment();
 
         var scope = enumerator.Current.Name == _globalObjectName ?
             Scope.Global :
@@ -63,13 +58,13 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
 
         if (scope == Scope.Local)
         {
-            WriteLine($"declare namespace {enumerator.Current.Name} {{");
+            _writer.WriteLine($"declare namespace {enumerator.Current.Name} {{");
 
-            IncreaseIndent();
+            _writer.IncreaseIndent();
         }
         else
         {
-            WriteLine(null);
+            _writer.WriteLine(null);
         }
 
         WriteDefinitions(
@@ -83,22 +78,22 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
             if (enumerator.Current.Type != ModuleType.Type)
                 throw new Exception("Module is not a type type.");
 
-            EnterComment();
+            _writer.EnterComment();
 
             WriteDescription(enumerator.Current.Description);
             WriteSource(enumerator.Current.Source);
             WriteSeeCollection(enumerator.Current.See);
 
-            ExitComment();
+            _writer.ExitComment();
 
             if (scope == Scope.Local)
-                Write("export ");
+                _writer.Write("export ");
             else
-                Write("declare ");
+                _writer.Write("declare ");
 
-            WriteLine($"interface {enumerator.Current.Name} {{");
+            _writer.WriteLine($"interface {enumerator.Current.Name} {{");
 
-            IncreaseIndent();
+            _writer.IncreaseIndent();
 
             WriteDefinitions(
                 enumerator.Current.Name,
@@ -106,18 +101,18 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
                 Scope.Member
             );
 
-            DecreaseIndent();
+            _writer.DecreaseIndent();
 
-            WriteLine("}");
-            WriteLine(null);
+            _writer.WriteLine("}");
+            _writer.WriteLine(null);
         }
 
         if (scope == Scope.Local)
         {
-            DecreaseIndent();
+            _writer.DecreaseIndent();
 
-            WriteLine("}");
-            WriteLine(null);
+            _writer.WriteLine("}");
+            _writer.WriteLine(null);
         }
     }
 
@@ -153,7 +148,7 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
 
     private void WriteOverload(Function function, OverloadWithMergedReturns overload, Scope scope)
     {
-        EnterComment();
+        _writer.EnterComment();
 
         WriteDescription(function.Description);
         WriteSource(function.Source);
@@ -168,44 +163,52 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
             else if (_reservedWords.Contains(parameterName))
                 parameterName = $"_{parameterName}";
 
-            Write($"@param {parameterName}");
+            _writer.Write($"@param {parameterName}");
 
             if (!string.IsNullOrWhiteSpace(parameter.DefaultValue))
-                Write($" Default: `{parameter.DefaultValue}`.");
+                _writer.Write($" Default: `{parameter.DefaultValue}`.");
 
-            if (!string.IsNullOrWhiteSpace(parameter.Description))
-                Write($" {parameter.Description}");
+            if (parameter.Description != null && parameter.Description.Any())
+            {
+                _writer.Write(" ");
+                new TsDescriptionWriter(_writer).WriteDescription(parameter.Description);
+            }
 
-            WriteLine(null);
+            _writer.WriteLine(null);
         }
 
         if (overload.Returns.Length > 0)
         {
             for (var i = 0; i < overload.Returns[0].Length; i++)
             {
-                Write($"@return ");
+                _writer.Write($"@return ");
 
                 for (var j = 0; j < overload.Returns.Length; j++)
                 {
                     var description = overload.Returns[j][i].Description;
 
-                    if (string.IsNullOrWhiteSpace(description))
-                        description = "`null`";
-
-                    Write($"{description} ");
+                    if (description != null && description.Any())
+                    {
+                        new TsDescriptionWriter(_writer).WriteDescription(description);
+                        _writer.Write(" ");
+                    }
+                    else
+                    {
+                        _writer.Write("`null` ");
+                    }
 
                     if (j != overload.Returns.Length - 1)
-                        Write("**or** ");
+                        _writer.Write("**or** ");
                 }
 
-                WriteLine(null);
+                _writer.WriteLine(null);
             }
         }
 
         if (!function.NeedSelf)
-            WriteLine("@noSelf");
+            _writer.WriteLine("@noSelf");
 
-        ExitComment();
+        _writer.ExitComment();
 
         var functionName = function.Name;
         var isOriginalReservedName = false;
@@ -220,16 +223,16 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
                 }
                 else
                 {
-                    Write("export ");
+                    _writer.Write("export ");
                 }
 
-                Write("function ");
+                _writer.Write("function ");
                 break;
             case Scope.Global:
                 if (_reservedWords.Contains(functionName))
                     throw new Exception();
 
-                Write("declare function ");
+                _writer.Write("declare function ");
                 break;
             case Scope.Member:
                 break;
@@ -237,7 +240,7 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
                 throw new InvalidOperationException();
         }
 
-        Write($"{functionName}(");
+        _writer.Write($"{functionName}(");
 
         var parameters = string.Join(", ", overload.Parameters.Select(x =>
         {
@@ -262,20 +265,20 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
             return result;
         }));
 
-        Write(parameters + "): ");
+        _writer.Write(parameters + "): ");
 
         if (overload.Returns.Length == 0)
         {
-            Write("void");
+            _writer.Write("void");
         }
         else if (overload.Returns.Length == 1)
         {
             var returns = overload.Returns[0];
 
             if (returns.Length == 1)
-                Write(ConvertToTsType(returns[0].Type));
+                _writer.Write(ConvertToTsType(returns[0].Type));
             else
-                Write($"LuaMultiReturn<[{GetReturnsType(overload.Returns[0])}]>");
+                _writer.Write($"LuaMultiReturn<[{GetReturnsType(overload.Returns[0])}]>");
         }
         else
         {
@@ -288,15 +291,15 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
                 ) +
                 "]>";
 
-            Write(returns);
+            _writer.Write(returns);
         }
 
-        WriteLine(";");
+        _writer.WriteLine(";");
 
         if (scope == Scope.Local && isOriginalReservedName)
-            WriteLine($"export {{ {functionName} as {function.Name} }};");
+            _writer.WriteLine($"export {{ {functionName} as {function.Name} }};");
 
-        WriteLine(null);
+        _writer.WriteLine(null);
     }
 
     private string GetReturnsType(Return[] returns)
@@ -309,21 +312,21 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
 
     private void WriteVariable(Variable variable, Scope scope)
     {
-        EnterComment();
+        _writer.EnterComment();
 
         WriteDescription(variable.Description);
         WriteSource(variable.Source);
         WriteSeeCollection(variable.See);
 
-        ExitComment();
+        _writer.ExitComment();
 
         switch (scope)
         {
             case Scope.Global:
-                Write("declare ");
+                _writer.Write("declare ");
                 break;
             case Scope.Local:
-                Write("export ");
+                _writer.Write("export ");
                 break;
             case Scope.Member:
                 break;
@@ -331,22 +334,23 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
                 throw new InvalidOperationException();
         }
 
-        Write($"const {variable.Name}");
+        _writer.Write($"const {variable.Name}");
 
         if (!string.IsNullOrWhiteSpace(variable.Value))
-            WriteLine($" = {variable.Value}");
+            _writer.WriteLine($" = {variable.Value}");
         else
-            WriteLine(": any");
+            _writer.WriteLine(": any");
 
-        WriteLine(null);
+        _writer.WriteLine(null);
     }
 
-    private void WriteDescription(string description)
+    private void WriteDescription(IDescriptionNode[] description)
     {
-        if (!string.IsNullOrWhiteSpace(description))
+        if (description != null && description.Any())
         {
-            WriteLine(description);
-            WriteLine(null);
+            new TsDescriptionWriter(_writer).WriteDescription(description);
+            _writer.WriteLine(null);
+            _writer.WriteLine(null);
         }
     }
 
@@ -356,18 +360,28 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
         {
             foreach (var see in seeCollection)
             {
-                Write($"@see");
+                _writer.Write($"@see");
 
-                if (!string.IsNullOrWhiteSpace(see.Link))
-                    Write($" {{@link {see.Link.Replace(':', '.')}}}");
+                switch (see.Link.Type)
+                {
+                    case LinkNodeType.ExternalLink:
+                    case LinkNodeType.TypeLink:
+                        _writer.Write($" {{@link {see.Link.Link} {see.Link.Name}}}");
+                        break;
+                    default:
+                        throw new InvalidDataException();
+                }
 
-                if (!string.IsNullOrWhiteSpace(see.Description))
-                    Write($" {see.Description}");
+                if (see.Description != null && see.Description.Any())
+                {
+                    _writer.Write(" ");
+                    new TsDescriptionWriter(_writer).WriteDescription(see.Description);
+                }
 
-                WriteLine(null);
+                _writer.WriteLine(null);
             }
 
-            WriteLine(null);
+            _writer.WriteLine(null);
         }
     }
 
@@ -375,87 +389,9 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
     {
         if (!string.IsNullOrWhiteSpace(source))
         {
-            WriteLine($"[View source]({source})");
-            WriteLine(null);
+            _writer.WriteLine($"[View source]({source})");
+            _writer.WriteLine(null);
         }
-    }
-
-    private void WriteLine(string str)
-    {
-        Write(str);
-        _writer.WriteLine();
-        _isCursorOnNewLine = true;
-    }
-
-    private void Write(string str)
-    {
-        if (str == null)
-        {
-            WriteInternal(str);
-            return;
-        }
-
-        var lines = str.Split(Environment.NewLine);
-
-        for (var i = 0; i < lines.Length - 1; i++)
-        {
-            WriteInternal(lines[i]);
-            _writer.WriteLine();
-            _isCursorOnNewLine = true;
-        }
-
-        WriteInternal(lines[lines.Length - 1]);
-    }
-
-    private void WriteInternal(string str)
-    {
-        if (_isCursorOnNewLine)
-        {
-            if (_indent > 0)
-                _writer.Write(GetIndent());
-            if (_comment)
-                _writer.Write(" * ");
-
-            _isCursorOnNewLine = false;
-        }
-
-        if (str != null)
-        {
-            if (_comment)
-                str = str.Replace("*/", "*⁠/");
-
-            _writer.Write(str);
-        }
-    }
-
-    private string GetIndent()
-    {
-        return new string(' ', _indent * 2);
-    }
-
-    private void EnterComment()
-    {
-        _comment = true;
-        _writer.WriteLine(GetIndent() + "/**");
-    }
-
-    private void ExitComment()
-    {
-        _comment = false;
-        _writer.WriteLine(GetIndent() + " */");
-    }
-
-    private void IncreaseIndent()
-    {
-        _indent++;
-    }
-
-    private void DecreaseIndent()
-    {
-        if (_indent == 0)
-            throw new Exception();
-
-        _indent--;
     }
 
     private bool IsIgnoreListContains(string moduleName, string name)
@@ -464,11 +400,6 @@ public sealed class TsDocWriter : IDocWriter, IDisposable
             return true;
 
         return false;
-    }
-
-    public void Dispose()
-    {
-        _writer.Dispose();
     }
 
     private static string ConvertToTsType(string type)

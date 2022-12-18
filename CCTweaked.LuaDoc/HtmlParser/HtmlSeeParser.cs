@@ -1,4 +1,5 @@
 using CCTweaked.LuaDoc.Entities;
+using CCTweaked.LuaDoc.Entities.Description;
 using HtmlAgilityPack;
 
 namespace CCTweaked.LuaDoc.HtmlParser;
@@ -6,10 +7,12 @@ namespace CCTweaked.LuaDoc.HtmlParser;
 internal sealed class HtmlSeeParser
 {
     private readonly IEnumerator<HtmlNode> _enumerator;
+    private readonly string _basePath;
 
-    public HtmlSeeParser(IEnumerator<HtmlNode> enumerator)
+    public HtmlSeeParser(IEnumerator<HtmlNode> enumerator, string basePath)
     {
         _enumerator = enumerator;
+        _basePath = basePath;
     }
 
     public See ParseSee()
@@ -18,16 +21,27 @@ internal sealed class HtmlSeeParser
             throw new UnexpectedHtmlElementException();
 
         var see = new See();
-        var text = _enumerator.Current.InnerText;
+
+        if (_enumerator.Current.ChildNodes.Count != 1)
+            throw new UnexpectedHtmlElementException();
+
+        var href = _enumerator.Current.ChildNodes[0].GetAttributeValue("href", null);
+
+        if (href == null)
+            throw new Exception("Unexpected null href");
+
+        var name = _enumerator.Current.ChildNodes[0].InnerText;
+
+        var node = HtmlLinkParser.ParseLink(_basePath, href, name);
 
         if (_enumerator.MoveNext())
         {
-            see.Link = text;
-            see.Description = new HtmlDescriptionParser(_enumerator).ParseDescription();
+            see.Link = node;
+            see.Description = new HtmlDescriptionParser(_enumerator, _basePath).ParseDescription().ToArray();
         }
         else
         {
-            see.Description = text;
+            see.Description = new[] { new TextNode(TextNodeStyle.Normal, name) };
         }
 
         return see;

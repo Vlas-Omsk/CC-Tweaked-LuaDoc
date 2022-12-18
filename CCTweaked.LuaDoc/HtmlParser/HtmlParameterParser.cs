@@ -7,10 +7,12 @@ namespace CCTweaked.LuaDoc.HtmlParser;
 internal sealed class HtmlParameterParser
 {
     private readonly IEnumerator<HtmlNode> _enumerator;
+    private readonly string _basePath;
 
-    public HtmlParameterParser(IEnumerator<HtmlNode> enumerator)
+    public HtmlParameterParser(IEnumerator<HtmlNode> enumerator, string basePath)
     {
         _enumerator = enumerator;
+        _basePath = basePath;
     }
 
     public Parameter ParseParameter()
@@ -58,7 +60,7 @@ internal sealed class HtmlParameterParser
         }
 
         if (_enumerator.Current != null)
-            parameter.Description = new HtmlDescriptionParser(_enumerator).ParseDescription();
+            parameter.Description = new HtmlDescriptionParser(_enumerator, _basePath).ParseDescription().ToArray();
 
         return parameter;
     }

@@ -103,12 +103,12 @@ public sealed class TsDocWriter
             else
                 _writer.Write("declare ");
 
-            _writer.WriteLine($"interface {enumerator.Current.Name}");
+            _writer.Write($"interface {enumerator.Current.Name}");
 
             if (CCExtensions.TryGetInterface(enumerator.Current.Name, out string @interfate))
                 _writer.Write($" extends {@interfate}");
 
-            _writer.WriteLine(" {{");
+            _writer.WriteLine(" {");
 
             _writer.IncreaseIndent();
 

@@ -4,7 +4,7 @@ using CCTweaked.LuaDoc.Entities.Description;
 
 namespace CCTweaked.LuaDoc.Writers;
 
-public sealed class TsDocWriter : IDocWriter
+public sealed class TsDocWriter
 {
     private static readonly string[] _reservedWords =
     {
@@ -34,9 +34,9 @@ public sealed class TsDocWriter : IDocWriter
         _writer = writer;
     }
 
-    public void Write(IEnumerable<Module> modules)
+    public void Write(IEnumerable<Module> modules, IEnumerable<Module> extends)
     {
-        using var enumerator = modules.GetEnumerator();
+        using var enumerator = modules.Concat(extends.Where(x => x.Type == ModuleType.Type)).GetEnumerator();
 
         if (!enumerator.MoveNext())
             throw new Exception();
@@ -73,6 +73,18 @@ public sealed class TsDocWriter : IDocWriter
             scope
         );
 
+        foreach (var extend in extends)
+        {
+            if (extend.Type != ModuleType.Module)
+                continue;
+
+            WriteDefinitions(
+                enumerator.Current.Name,
+                extend.Definitions,
+                scope
+            );
+        }
+
         while (enumerator.MoveNext())
         {
             if (enumerator.Current.Type != ModuleType.Type)
@@ -91,7 +103,12 @@ public sealed class TsDocWriter : IDocWriter
             else
                 _writer.Write("declare ");
 
-            _writer.WriteLine($"interface {enumerator.Current.Name} {{");
+            _writer.WriteLine($"interface {enumerator.Current.Name}");
+
+            if (CCExtensions.TryGetInterface(enumerator.Current.Name, out string @interfate))
+                _writer.Write($" extends {@interfate}");
+
+            _writer.WriteLine(" {{");
 
             _writer.IncreaseIndent();
 

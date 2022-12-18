@@ -4,7 +4,7 @@ using CCTweaked.LuaDoc.Entities.Description;
 
 namespace CCTweaked.LuaDoc.Writers;
 
-public sealed class LuaDocWriter : IDocWriter
+public sealed class LuaDocWriter
 {
     private readonly LuaWriter _writer;
 
@@ -49,7 +49,12 @@ public sealed class LuaDocWriter : IDocWriter
         WriteSource(module.Source);
         WriteSeeCollection(module.See);
 
-        _writer.WriteLine($"@class {module.Name}lib");
+        _writer.Write($"@class {module.Name}lib");
+
+        if (CCExtensions.TryGetInterface(module.Name, out string @interfate))
+            _writer.Write($" : {@interfate}lib");
+
+        _writer.WriteLine(null);
 
         _writer.ExitComment();
 
@@ -70,7 +75,12 @@ public sealed class LuaDocWriter : IDocWriter
         WriteSource(module.Source);
         WriteSeeCollection(module.See);
 
-        _writer.WriteLine($"@class {module.Name}");
+        _writer.Write($"@class {module.Name}");
+
+        if (CCExtensions.TryGetInterface(module.Name, out string @interfate))
+            _writer.Write($" : {@interfate}");
+
+        _writer.WriteLine(null);
 
         _writer.ExitComment();
 
@@ -206,20 +216,25 @@ public sealed class LuaDocWriter : IDocWriter
 
     private void WriteVariable(Module module, Variable variable)
     {
+        var isValueEmpty = string.IsNullOrWhiteSpace(variable.Value);
+
         _writer.EnterComment();
 
         WriteDescriptionLine(variable.Description);
         WriteSource(variable.Source);
         WriteSeeCollection(variable.See);
 
+        if (isValueEmpty)
+            _writer.WriteLine("@type any");
+
         _writer.ExitComment();
 
         _writer.Write($"{module.Name}.{variable.Name}");
 
-        if (!string.IsNullOrWhiteSpace(variable.Value))
-            _writer.Write($" = {variable.Value}");
-        else
+        if (isValueEmpty)
             _writer.Write(" = {}");
+        else
+            _writer.Write($" = {variable.Value}");
 
         _writer.WriteLine(null);
         _writer.WriteLine(null);

@@ -1,3 +1,4 @@
+using CCTweaked.LuaDoc.Entities;
 using CCTweaked.LuaDoc.HtmlParser;
 using CCTweaked.LuaDoc.Writers;
 
@@ -30,24 +31,70 @@ public static class Program
     {
         Directory.CreateDirectory(_tsOutputPath);
 
+        var modulesCache = new Dictionary<string, Module[]>();
+        var modulesToWrite = new Dictionary<string, Module[]>();
+
         using var indexWriter = new StreamWriter(Path.Combine(_tsOutputPath, "index.d.ts"));
 
         foreach (var filePath in files)
         {
             var relativeDirectory = Path.GetRelativePath(htmlDocsDirectory, Path.GetDirectoryName(filePath));
 
-            var modules = new HtmlModulesParser(filePath, relativeDirectory).ParseModules();
+            var modules = new HtmlModulesParser(filePath, relativeDirectory).ParseModules().ToArray();
+
+            if (modules[0].Type != ModuleType.Module)
+                throw new Exception();
+
+            var extends = Array.Empty<Module>();
+
+            modulesCache.Add(modules[0].Name, modules);
+
+            if (CCExtensions.TryGetInterface(modules[0].Name, out string @interface))
+            {
+                if (!modulesCache.TryGetValue(@interface, out extends))
+                {
+                    modulesToWrite.Add(filePath, modules);
+                    continue;
+                }
+            }
+
             var fileName = Path.GetFileNameWithoutExtension(filePath);
 
             using var writer = new TsWriter(Path.Combine(_tsOutputPath, fileName + ".d.ts"));
 
             var docWriter = new TsDocWriter(writer);
-            docWriter.Write(modules);
+            docWriter.Write(modules, extends);
 
             if (relativeDirectory[0] != '.')
                 relativeDirectory = $"./{relativeDirectory}";
 
             indexWriter.WriteLine($"/// <reference path=\"{relativeDirectory}/{fileName}.d.ts\" />");
+        }
+
+        while (modulesToWrite.Count > 0)
+        {
+            foreach (var keyValue in modulesToWrite)
+            {
+                var relativeDirectory = Path.GetRelativePath(htmlDocsDirectory, Path.GetDirectoryName(keyValue.Key));
+
+                if (CCExtensions.TryGetInterface(keyValue.Value[0].Name, out string @interface))
+                {
+                    if (!modulesCache.ContainsKey(@interface))
+                        continue;
+                }
+
+                var fileName = Path.GetFileNameWithoutExtension(keyValue.Key);
+
+                using var writer = new TsWriter(Path.Combine(_tsOutputPath, fileName + ".d.ts"));
+
+                var docWriter = new TsDocWriter(writer);
+                docWriter.Write(keyValue.Value, modulesCache[@interface]);
+
+                if (relativeDirectory[0] != '.')
+                    relativeDirectory = $"./{relativeDirectory}";
+
+                indexWriter.WriteLine($"/// <reference path=\"{relativeDirectory}/{fileName}.d.ts\" />");
+            }
         }
     }
 

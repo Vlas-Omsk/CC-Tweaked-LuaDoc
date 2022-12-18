@@ -56,10 +56,10 @@ For more information see [TypeScript Dosc](https://www.typescriptlang.org/tsconf
 
 3. After downloading CC-Tweaked source code and running `./gradlew build`, run `./gradlew illuminateDocs`
 
-4. Run CC-Tweaked-LuaDoc with path to directory `build/illuaminate/module` in arguments, for example
+4. Run CC-Tweaked-LuaDoc with path to directory `build/illuaminate` in arguments, for example
 
 ```
-./CC-Tweaked-LuaDoc /path/to/CC-Tweaked/build/illuaminate/module
+./CC-Tweaked-LuaDoc /path/to/CC-Tweaked/build/illuaminate
 ```
 
 5. After that, directories `cc_libs_<target language>` will be generated.
